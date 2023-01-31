@@ -98,8 +98,12 @@ impl Editor {
         // Clear the screen
         self.clear_screen(true, false)?;
         
-        // Draw the buffer
-        execute!(stdout(), Print(&self.buffer))
+        // Draw the buffer, making sure to carriage return after each line
+        for line in self.buffer.lines() {
+            queue!(stdout(), Print(line), Print("\r"))?;
+        }
+
+        stdout().flush()
     }
 
     // [Direct] Closes the terminal and exits the program
