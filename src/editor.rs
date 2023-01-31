@@ -16,6 +16,7 @@ use ropey::Rope;
 pub struct Editor {
     file: File,
     buffer: Rope,
+    // TODO: Probably add a Terminal struct to hold these fields
     window_length: usize,
     window_height: usize,
 }
@@ -93,7 +94,7 @@ impl Editor {
         Ok(())
     }
 
-    // [Direct/Lazy] Clears the screen
+    // [Lazy/Direct] Clears the screen
     fn clear_screen(&self, keep_cursor_pos: bool, direct_execute: bool) -> Result<()> {
         queue!(stdout(), terminal::Clear(terminal::ClearType::All))?;
 
