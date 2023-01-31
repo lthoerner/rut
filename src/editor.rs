@@ -5,7 +5,7 @@ use ropey::Rope;
 use crossterm::Result;
 use crossterm::terminal;
 use crossterm::cursor;
-use crossterm::event::{self, Event, KeyCode, KeyModifiers};
+use crossterm::event::{self, Event, KeyEvent, KeyCode, KeyModifiers};
 #[allow(unused_imports)]
 use crossterm::style::{Print, PrintStyledContent};
 use crossterm::{queue, execute};
@@ -53,25 +53,43 @@ impl Editor {
         // Clear the screen and draw the buffer
         self.update(true)?;
 
-        // Watch for key events
+        // Start the event loop
+        self.start_event_loop()
+    }
+
+    // Enters the event loop for the editor
+    fn start_event_loop(&mut self) -> Result<()> {
         loop {
-            // Get the next event
+            // Wait for the next event
+            // * This is a blocking call
             let event = event::read()?;
 
-            // Handle the event
-            match event {
-                Event::Key(key_event) => {
-                    match (key_event.code, key_event.modifiers) {
-                        // Exit the program on Ctrl+C
-                        (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-                            self.exit()?;
-                        },
-                        _ => (),
-                    }
-                },
-                _ => (),
-            }
+            // Dispatch the event to the appropriate handler
+            self.handle_event(event)?;
         }
+    }
+
+    // Handles a generic Event by dispatching it to the appropriate handler function
+    // ? Should this be done with nested functions?
+    fn handle_event(&mut self, event: Event) -> Result<()> {
+        match event {
+            Event::Key(key_event) => self.handle_key_event(key_event)?,
+            _ => (),
+        }
+
+        Ok(())
+    }
+
+    fn handle_key_event(&mut self, event: KeyEvent) -> Result<()> {
+        match (event.code, event.modifiers) {
+            // Exit the program on Ctrl+C
+            (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                self.exit().unwrap();
+            },
+            _ => (),
+        }
+
+        Ok(())
     }
     
     // [Direct/Lazy] Clears the screen
