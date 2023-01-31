@@ -5,7 +5,8 @@ use ropey::Rope;
 use crossterm::Result;
 use crossterm::terminal;
 use crossterm::cursor;
-use crossterm::style::{Print};
+use crossterm::event::{self, Event, KeyCode, KeyModifiers};
+use crossterm::style::{Print, PrintStyledContent};
 use crossterm::{queue, execute};
 
 // Represents the state of the editor
@@ -54,7 +55,25 @@ impl Editor {
         // Clear the screen and draw the buffer
         self.update()?;
 
-        loop {}
+        // Watch for key events
+        loop {
+            // Get the next event
+            let event = event::read()?;
+
+            // Handle the event
+            match event {
+                Event::Key(key_event) => {
+                    match (key_event.code, key_event.modifiers) {
+                        // Exit the program on Ctrl+C
+                        (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
+                            self.exit()?;
+                        },
+                        _ => (),
+                    }
+                },
+                _ => (),
+            }
+        }
     }
     
     // [Direct/Lazy] Clears the screen
