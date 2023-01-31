@@ -1,8 +1,10 @@
+use crossterm::Result;
+
 mod editor;
 
 use editor::Editor;
 
-fn main() {
+fn main() -> Result<()> {
     // Make sure the user has provided one argument (filename to open)
     if std::env::args().len() != 2 {
         println!("Usage: rut <filename>");
@@ -14,5 +16,5 @@ fn main() {
 
     // Create and run the editor
     let mut editor = Editor::new(&filename);
-    editor.run();
+    editor.run()
 }
