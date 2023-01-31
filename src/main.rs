@@ -1,6 +1,7 @@
 use crossterm::Result;
 
 mod editor;
+mod terminal;
 
 use editor::Editor;
 
