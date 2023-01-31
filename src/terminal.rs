@@ -11,19 +11,26 @@ use ropey::Rope;
 
 // Represents the state of the terminal/cursor and implements methods for interacting with them
 pub struct Terminal {
-    window_length: usize,
-    window_height: usize,
+    window_length: u16,
+    window_height: u16,
+}
+
+pub enum CursorMovement {
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 impl Terminal {
     // Create a new Terminal instance
     pub fn new() -> Self {
         // Get the terminal size
-        let (window_x, window_y) = terminal::size().expect("[INTERNAL ERROR] Failed to retrieve terminal size");
+        let (window_length, window_height) = terminal::size().expect("[INTERNAL ERROR] Failed to retrieve terminal size");
 
         Self {
-            window_length: window_x as usize,
-            window_height: window_y as usize,
+            window_length,
+            window_height,
         }
     }
 
@@ -67,9 +74,68 @@ impl Terminal {
         Ok(())
     }
 
+    // [Direct] Moves the cursor in the terminal window, with wrapping
+    pub fn move_cursor(&self, movement: CursorMovement) -> Result<()> {
+        let (cursor_x, cursor_y) = cursor::position()?;
+
+        use CursorMovement::*;
+
+        match movement {
+            Up => {
+                // Avoid moving cursor out of bounds
+                if cursor_y > 0 {
+                    queue!(stdout(), cursor::MoveUp(1))?;
+                } else {
+                    return Ok(());
+                }
+            },
+            Down => {
+                // Avoid moving cursor out of bounds
+                if cursor_y < self.window_height - 1 {
+                    queue!(stdout(), cursor::MoveDown(1))?;
+                } else {
+                    return Ok(());
+                }
+            },
+            Left => {
+                // Avoid wrapping past the start of the screen
+                // * This might need to be changed once scrolling is implemented
+                if cursor_x == 0 && cursor_y == 0 {
+                    return Ok(());
+                } else if cursor_x > 0 {
+                    queue!(stdout(), cursor::MoveLeft(1))?;
+                } else {
+                    queue!(stdout(), cursor::MoveTo(self.window_length as u16, cursor_y - 1))?;
+                }
+            },
+            Right => {
+                let max_x = self.window_length - 1;
+                let max_y = self.window_height - 1;
+
+                // Avoid wrapping past the start of the screen
+                // * This might need to be changed once scrolling is implemented
+                if cursor_x == max_x && cursor_y == max_y {
+                    return Ok(());
+                } else if cursor_x < max_x {
+                    queue!(stdout(), cursor::MoveRight(1))?;
+                } else {
+                    queue!(stdout(), cursor::MoveTo(0, cursor_y + 1))?;
+                }
+            },
+        }
+
+        stdout().flush()
+    }
+
     // Converts a cursor position to a buffer coordinate
     fn get_buffer_coordinate(&self) -> Result<usize> {
-        let (cursor_x, cursor_y) = cursor::position()?;
-        Ok((cursor_y as usize) * self.window_length + cursor_x as usize)
+        let (cursor_x, cursor_y) = self.get_cursor_position()?;
+        Ok(cursor_y * self.window_length as usize + cursor_x)
+    }
+
+    // Essentially the same as cursor::position(), but returns usize instead of u16
+    fn get_cursor_position(&self) -> Result<(usize, usize)> {
+        let position = cursor::position()?;
+        Ok((position.0 as usize, position.1 as usize))
     }
 }

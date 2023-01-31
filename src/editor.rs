@@ -7,7 +7,7 @@ use crossterm::terminal;
 use crossterm::Result;
 use ropey::Rope;
 
-use crate::terminal::Terminal;
+use crate::terminal::{Terminal, CursorMovement};
 
 // Represents the state of the editor
 // There should only be one instance of this struct at any given point
@@ -87,6 +87,19 @@ impl Editor {
             // Save the file on Ctrl+S
             (KeyCode::Char('s'), KeyModifiers::CONTROL) => {
                 self.save()?;
+            },
+            // Handle arrow keypresses
+            (KeyCode::Up, KeyModifiers::NONE) => {
+                self.terminal.move_cursor(CursorMovement::Up)?;
+            },
+            (KeyCode::Down, KeyModifiers::NONE) => {
+                self.terminal.move_cursor(CursorMovement::Down)?;
+            },
+            (KeyCode::Left, KeyModifiers::NONE) => {
+                self.terminal.move_cursor(CursorMovement::Left)?;
+            },
+            (KeyCode::Right, KeyModifiers::NONE) => {
+                self.terminal.move_cursor(CursorMovement::Right)?;
             },
             _ => (),
         }
