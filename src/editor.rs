@@ -1,7 +1,9 @@
 use std::fs::{File, OpenOptions};
 
 use ropey::Rope;
+use crossterm::Result;
 use crossterm::terminal;
+use crossterm::cursor;
 
 // Represents the state of the editor
 // There should only be one instance of this struct at any given point
@@ -41,5 +43,11 @@ impl Editor {
     // Opens the editor in the terminal and runs the event loop
     pub fn run(&mut self) {
         todo!()
+    }
+
+    // Gets the cursor position in relation to the buffer rather than the terminal
+    fn get_rope_coordinate(&self) -> Result<usize> {
+        let cursor_position = cursor::position()?;
+        Ok((cursor_position.1 as usize) * self.window_length + cursor_position.0 as usize - 1)
     }
 }
