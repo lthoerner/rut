@@ -82,6 +82,19 @@ impl Editor {
         // Draw the buffer
         execute!(stdout(), Print(&self.buffer))
     }
+
+    // [Direct] Closes the terminal and exits the program
+    #[allow(dead_code)]
+    fn exit(&self) -> Result<()> {
+        // Disable raw mode so the terminal can be used normally
+        terminal::disable_raw_mode()?;
+
+        // Clear the screen
+        self.clear_screen(false, true)?;
+
+        // Exit the program
+        std::process::exit(0);
+    }
     
     // Gets the cursor position in relation to the buffer rather than the terminal
     #[allow(dead_code)]
