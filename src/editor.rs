@@ -1,5 +1,6 @@
 use std::fs::{File, OpenOptions};
-use std::io::{stdout, Write};
+use std::io::{stdout, Write, Seek};
+use std::sync::{Arc, Mutex};
 
 use crossterm::cursor;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
@@ -14,7 +15,7 @@ use ropey::Rope;
 // There should only be one instance of this struct at any given point
 #[allow(dead_code)]
 pub struct Editor {
-    file: File,
+    file: Arc<Mutex<File>>,
     buffer: Rope,
     // TODO: Probably add a Terminal struct to hold these fields
     window_length: usize,
@@ -34,6 +35,9 @@ impl Editor {
 
         // Read the file into a Rope
         let buffer = Rope::from_reader(&file).unwrap();
+
+        // Store the file in an Arc<Mutex> so it can be shared between threads
+        let file = Arc::new(Mutex::new(file));
 
         // Get the terminal size
         let window_size = terminal::size().expect("[INTERNAL ERROR] Failed to get terminal size");
@@ -71,7 +75,6 @@ impl Editor {
     }
 
     // Handles a generic Event by dispatching it to the appropriate handler function
-    // ? Should this be done with nested functions?
     fn handle_event(&mut self, event: Event) -> Result<()> {
         match event {
             Event::Key(key_event) => self.handle_key_event(key_event)?,
@@ -86,8 +89,12 @@ impl Editor {
         match (event.code, event.modifiers) {
             // Exit the program on Ctrl+C
             (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
-                self.exit().unwrap();
-            }
+                self.exit()?;
+            },
+            // Save the file on Ctrl+S
+            (KeyCode::Char('s'), KeyModifiers::CONTROL) => {
+                self.save()?;
+            },
             _ => (),
         }
 
@@ -132,6 +139,30 @@ impl Editor {
         }
 
         stdout().flush()
+    }
+
+    // [Direct] Saves the buffer to the file
+    // ! This might crash the program if the file is being saved twice at the same time
+    fn save(&mut self) -> Result<()> {
+        // Clone the buffer so it can be used in a separate thread
+        let buffer = self.buffer.clone();
+
+        // Get a copy of the File reference to use it in the thread
+        let file = self.file.clone();
+        
+        std::thread::spawn(move || {
+            // Acquire a lock on the file so it can be written to
+            let mut file = file.lock().expect("[INTERNAL ERROR] Failed to acquire lock on file");
+
+            // Truncate and rewind the file
+            file.set_len(0).expect("[INTERNAL ERROR] Failed to truncate file");
+            file.rewind().expect("[INTERNAL ERROR] Failed to rewind file");
+
+            // Write the buffer to the file
+            buffer.write_to(&*file).expect("[INTERNAL ERROR] Failed to write to file");
+        });
+
+        Ok(())
     }
 
     // [Direct] Closes the terminal and exits the program
