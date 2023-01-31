@@ -11,7 +11,6 @@ use crate::terminal::Terminal;
 
 // Represents the state of the editor
 // There should only be one instance of this struct at any given point
-#[allow(dead_code)]
 pub struct Editor {
     file: Arc<Mutex<File>>,
     buffer: Rope,
@@ -120,7 +119,6 @@ impl Editor {
     }
 
     // [Direct] Closes the terminal and exits the program
-    #[allow(dead_code)]
     fn exit(&self) -> Result<()> {
         // Disable raw mode so the terminal can be used normally
         terminal::disable_raw_mode()?;
