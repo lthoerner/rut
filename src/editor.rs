@@ -80,6 +80,7 @@ impl Editor {
         Ok(())
     }
 
+    // Handles a KeyEvent using its code and modifiers
     fn handle_key_event(&mut self, event: KeyEvent) -> Result<()> {
         match (event.code, event.modifiers) {
             // Exit the program on Ctrl+C
