@@ -5,6 +5,7 @@ use ropey::Rope;
 use crossterm::Result;
 use crossterm::terminal;
 use crossterm::cursor;
+use crossterm::style::{Print};
 use crossterm::{queue, execute};
 
 // Represents the state of the editor
@@ -44,25 +45,48 @@ impl Editor {
 
     // Opens the editor in the terminal and runs the event loop
     pub fn run(&mut self) -> Result<()> {
-        self.clear_screen(true)?;
+        // Enable raw mode for the terminal
+        terminal::enable_raw_mode()?;
 
-        todo!()
+        // Reset the cursor position
+        execute!(stdout(), cursor::MoveTo(0, 0))?;
+
+        // Clear the screen and draw the buffer
+        self.update()?;
+
+        loop {}
     }
-
-    // Gets the cursor position in relation to the buffer rather than the terminal
-    fn get_rope_coordinate(&self) -> Result<usize> {
-        let (cursor_x, cursor_y) = cursor::position()?;
-        Ok((cursor_y as usize) * self.window_length + cursor_x as usize)
-    }
-
-    // [Direct] Clears the screen
-    fn clear_screen(&self, keep_cursor_pos: bool) -> Result<()> {
+    
+    // [Direct/Lazy] Clears the screen
+    fn clear_screen(&self, keep_cursor_pos: bool, direct_execute: bool) -> Result<()> {
         queue!(stdout(), terminal::Clear(terminal::ClearType::All))?;
 
+        // The default behavior of terminal::Clear is to maintain the cursor position
+        // If the user wants to reset the cursor position, it needs to be done manually
         if !keep_cursor_pos {
             queue!(stdout(), cursor::MoveTo(0, 0))?;
         }
-
-        stdout().flush()
+        
+        if direct_execute {
+            stdout().flush()?;
+        }
+        
+        Ok(())
+    }
+    
+    // [Direct] Performs a frame update, clearing the screen and redrawing the buffer
+    fn update(&self) -> Result<()> {
+        // Clear the screen
+        self.clear_screen(true, false)?;
+        
+        // Draw the buffer
+        execute!(stdout(), Print(&self.buffer))
+    }
+    
+    // Gets the cursor position in relation to the buffer rather than the terminal
+    #[allow(dead_code)]
+    fn get_rope_coordinate(&self) -> Result<usize> {
+        let (cursor_x, cursor_y) = cursor::position()?;
+        Ok((cursor_y as usize) * self.window_length + cursor_x as usize)
     }
 }
