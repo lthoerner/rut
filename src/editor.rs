@@ -1,14 +1,14 @@
 use std::fs::{File, OpenOptions};
 use std::io::{stdout, Write};
 
-use ropey::Rope;
-use crossterm::Result;
-use crossterm::terminal;
 use crossterm::cursor;
-use crossterm::event::{self, Event, KeyEvent, KeyCode, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 #[allow(unused_imports)]
 use crossterm::style::{Print, PrintStyledContent};
-use crossterm::{queue, execute};
+use crossterm::terminal;
+use crossterm::Result;
+use crossterm::{execute, queue};
+use ropey::Rope;
 
 // Represents the state of the editor
 // There should only be one instance of this struct at any given point
@@ -85,13 +85,13 @@ impl Editor {
             // Exit the program on Ctrl+C
             (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                 self.exit().unwrap();
-            },
+            }
             _ => (),
         }
 
         Ok(())
     }
-    
+
     // [Direct/Lazy] Clears the screen
     fn clear_screen(&self, keep_cursor_pos: bool, direct_execute: bool) -> Result<()> {
         queue!(stdout(), terminal::Clear(terminal::ClearType::All))?;
@@ -101,14 +101,14 @@ impl Editor {
         if !keep_cursor_pos {
             queue!(stdout(), cursor::MoveTo(0, 0))?;
         }
-        
+
         if direct_execute {
             stdout().flush()?;
         }
-        
+
         Ok(())
     }
-    
+
     // [Direct] Performs a frame update, clearing the screen and redrawing the buffer
     fn update(&self, reset_cursor: bool) -> Result<()> {
         // Clear the screen
@@ -144,7 +144,7 @@ impl Editor {
         // Exit the program
         std::process::exit(0);
     }
-    
+
     // Gets the cursor position in relation to the buffer rather than the terminal
     #[allow(dead_code)]
     fn get_rope_coordinate(&self) -> Result<usize> {
