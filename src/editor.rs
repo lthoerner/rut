@@ -6,6 +6,7 @@ use crossterm::Result;
 use crossterm::terminal;
 use crossterm::cursor;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
+#[allow(unused_imports)]
 use crossterm::style::{Print, PrintStyledContent};
 use crossterm::{queue, execute};
 
@@ -49,11 +50,8 @@ impl Editor {
         // Enable raw mode for the terminal
         terminal::enable_raw_mode()?;
 
-        // Reset the cursor position
-        execute!(stdout(), cursor::MoveTo(0, 0))?;
-
         // Clear the screen and draw the buffer
-        self.update()?;
+        self.update(true)?;
 
         // Watch for key events
         loop {
@@ -94,13 +92,23 @@ impl Editor {
     }
     
     // [Direct] Performs a frame update, clearing the screen and redrawing the buffer
-    fn update(&self) -> Result<()> {
+    fn update(&self, reset_cursor: bool) -> Result<()> {
         // Clear the screen
-        self.clear_screen(true, false)?;
-        
+        self.clear_screen(!reset_cursor, false)?;
+
+        // Save the position of the cursor
+        // This could be be either the position of the cursor at the start of the frame update,
+        // Or the (0, 0) position if the cursor is being reset
+        execute!(stdout(), cursor::SavePosition)?;
+
         // Draw the buffer, making sure to carriage return after each line
         for line in self.buffer.lines() {
             queue!(stdout(), Print(line), Print("\r"))?;
+        }
+
+        // Restore the cursor position to its saved state
+        if reset_cursor {
+            queue!(stdout(), cursor::RestorePosition)?;
         }
 
         stdout().flush()
