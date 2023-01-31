@@ -44,15 +44,19 @@ impl Terminal {
         // Or the (0, 0) position if the cursor is being reset
         execute!(stdout(), cursor::SavePosition)?;
 
+        // Move the cursor to the top left corner in order to draw the buffer properly
+        // This may seem unnecessary, but it is actually required because if the cursor position
+        // is not being reset, then the buffer would otherwise be drawn starting at the cursor position,
+        // which would offset the entire frame
+        queue!(stdout(), cursor::MoveTo(0, 0))?;
+
         // Draw the buffer, making sure to carriage return after each line
         for line in buffer.lines() {
-            queue!(stdout(), Print(line), Print("\r"))?;
+            queue!(stdout(), Print("\r"), Print(line))?;
         }
 
         // Restore the cursor position to its saved state
-        if reset_cursor {
-            queue!(stdout(), cursor::RestorePosition)?;
-        }
+        queue!(stdout(), cursor::RestorePosition)?;
 
         stdout().flush()
     }
@@ -72,6 +76,25 @@ impl Terminal {
         }
 
         Ok(())
+    }
+
+    // [Direct] Deletes the character in the buffer immediately preceding the cursor
+    pub fn backspace(&self, buffer: &mut Rope) -> Result<()> {
+        let buffer_coordinate = self.get_buffer_coordinate()?;
+
+        // Avoid deleting characters outside of the buffer
+        if buffer_coordinate == 0 || buffer_coordinate > buffer.len_chars() {
+            return Ok(());
+        }
+
+        // Delete the character in the buffer
+        buffer.remove(buffer_coordinate - 1..buffer_coordinate);
+
+        // Perform a frame update
+        self.update(buffer, false)?;
+
+        // Move the cursor left
+        self.move_cursor(CursorMovement::Left)
     }
 
     // [Direct] Moves the cursor in the terminal window, with wrapping

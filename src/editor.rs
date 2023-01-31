@@ -101,6 +101,10 @@ impl Editor {
             (KeyCode::Right, KeyModifiers::NONE) => {
                 self.terminal.move_cursor(CursorMovement::Right)?;
             },
+            // Handle backspace
+            (KeyCode::Backspace, KeyModifiers::NONE) => {
+                self.terminal.backspace(&mut self.buffer)?;
+            },
             _ => (),
         }
 
