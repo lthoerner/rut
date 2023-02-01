@@ -103,7 +103,11 @@ impl Editor {
             },
             // Handle backspace
             (KeyCode::Backspace, KeyModifiers::NONE) => {
-                self.terminal.backspace(&mut self.buffer)?;
+                self.terminal.remove_char(&mut self.buffer, false)?;
+            },
+            // Handle delete
+            (KeyCode::Delete, KeyModifiers::NONE) => {
+                self.terminal.remove_char(&mut self.buffer, true)?;
             },
             _ => (),
         }

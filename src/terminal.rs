@@ -78,17 +78,29 @@ impl Terminal {
         Ok(())
     }
 
-    // [Direct] Deletes the character in the buffer immediately preceding the cursor
-    pub fn backspace(&self, buffer: &mut Rope) -> Result<()> {
+    // [Direct] Deletes the character in the buffer immediately preceding the cursor,
+    // or alternatively immediately after the cursor (delete_mode)
+    pub fn remove_char(&self, buffer: &mut Rope, delete_mode: bool) -> Result<()> {
         let buffer_coordinate = self.get_buffer_coordinate()?;
+        let buffer_len = buffer.len_chars();
 
         // Avoid deleting characters outside of the buffer
-        if buffer_coordinate == 0 || buffer_coordinate > buffer.len_chars() {
-            return Ok(());
+        match delete_mode {
+            false => if buffer_coordinate == 0 || buffer_coordinate > buffer_len {
+                return Ok(());
+            },
+            true => if buffer_coordinate >= buffer_len {
+                return Ok(());
+            },
         }
 
+        let remove_range = match delete_mode {
+            false => buffer_coordinate - 1..buffer_coordinate,
+            true => buffer_coordinate..buffer_coordinate + 1,
+        };
+
         // Delete the character in the buffer
-        buffer.remove(buffer_coordinate - 1..buffer_coordinate);
+        buffer.remove(remove_range);
 
         // Perform a frame update
         self.update(buffer, false)?;
