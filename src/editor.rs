@@ -102,6 +102,8 @@ impl Editor {
             (KeyCode::Backspace, KeyModifiers::NONE) => self.terminal.remove_char(&mut self.buffer, false)?,
             // Handle delete
             (KeyCode::Delete, KeyModifiers::NONE) => self.terminal.remove_char(&mut self.buffer, true)?,
+            // Handle enter
+            (KeyCode::Enter, KeyModifiers::NONE) => self.terminal.insert_char(&mut self.buffer, '\n')?,
             // Handle normal characters
             (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => self.terminal.insert_char(&mut self.buffer, c)?,
             _ => (),

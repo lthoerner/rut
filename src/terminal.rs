@@ -91,7 +91,7 @@ impl Terminal {
         } else {
             // Get the coordinate of the end of the buffer
             // ? Will this need to be adjusted based on the length of the insertion?
-            let (buffer_end_x, buffer_end_y) = self.get_cursor_coord_from_buffer_coord(buffer_size)?;
+            let (buffer_end_x, buffer_end_y) = self.get_cursor_coord_from_buffer_index(buffer_size)?;
 
             // Move the cursor to the end of the buffer and clear everything after it
             queue!(stdout(), cursor::MoveTo(buffer_end_x as u16, buffer_end_y as u16))?;
@@ -111,18 +111,12 @@ impl Terminal {
     // [Direct] Deletes the character in the buffer immediately preceding the cursor,
     // or alternatively immediately after the cursor (delete_mode)
     pub fn remove_char(&self, buffer: &mut Rope, delete_mode: bool) -> Result<()> {
-        let buffer_coordinate = self.get_buffer_coord()?;
-        let buffer_len = buffer.len_chars();
-
-        // Avoid deleting characters outside of the buffer
-        match delete_mode {
-            false => if buffer_coordinate == 0 || buffer_coordinate > buffer_len {
-                return Ok(());
-            },
-            true => if buffer_coordinate >= buffer_len {
-                return Ok(());
-            },
-        }
+        // Get the buffer coordinate of the cursor
+        // This should automatically avoid deleting characters outside of the buffer
+        let buffer_coordinate = match self.get_buffer_coord(buffer)? {
+            Some(coord) => coord,
+            None => return Ok(()),
+        };
 
         // The character to delete will either be before the cursor (backspace), or after (delete)
         let remove_range = match delete_mode {
@@ -145,13 +139,12 @@ impl Terminal {
 
     // [Direct] Inserts a character into the buffer at the cursor position
     pub fn insert_char(&self, buffer: &mut Rope, character: char) -> Result<()> {
-        let buffer_coordinate = self.get_buffer_coord()?;
-        let buffer_len = buffer.len_chars();
-
-        // Avoid inserting characters outside of the buffer
-        if buffer_coordinate > buffer_len {
-            return Ok(());
-        }
+        // Get the buffer coordinate of the cursor
+        // This should automatically avoid inserting characters outside of the buffer
+        let buffer_coordinate = match self.get_buffer_coord(buffer)? {
+            Some(coord) => coord,
+            None => return Ok(()),
+        };
 
         // Insert the character into the buffer
         buffer.insert_char(buffer_coordinate, character);
@@ -159,8 +152,11 @@ impl Terminal {
         // Perform a frame update
         self.update(buffer)?;
 
-        // Move the cursor right
-        self.move_cursor(CursorMovement::Right)
+        // Move the cursor right if the character is not a newline, and move it down if it is
+        self.move_cursor(match character {
+            '\n' => CursorMovement::Down,
+            _ => CursorMovement::Right,
+        })
     }
 
     // [Direct] Moves the cursor in the terminal window, with wrapping
@@ -218,14 +214,64 @@ impl Terminal {
 
     // Converts a cursor position to a buffer coordinate
     // * This will need to be adjusted once scrolling/margins are implemented
-    fn get_buffer_coord(&self) -> Result<usize> {
+    fn get_buffer_coord(&self, buffer: &Rope) -> Result<Option<usize>> {
         let (cursor_x, cursor_y) = self.get_cursor_position()?;
-        Ok(cursor_y * self.window_length as usize + cursor_x)
+
+        // Get the length of the line the cursor is on
+        let line_length = self.line_length(buffer, cursor_y);
+
+        // Check for out-of-bounds errors for the cursor coordinates
+        if cursor_x > line_length || cursor_y >= self.line_count(buffer) {
+            return Ok(None);
+        }
+
+        // Get the starting buffer index of the line the cursor is on
+        let line_start = self.line_start_index(buffer, cursor_y);
+
+        // Get the buffer index of the cursor
+        Ok(Some(line_start + cursor_x))
+    }
+
+    // Returns the number of lines in the buffer
+    // ? Should this be moved somewhere else?
+    fn line_count(&self, buffer: &Rope) -> usize {
+        buffer.len_lines()
+    }
+
+    // Returns the length (end X-coordinate) of a line in the buffer
+    // ? Should this be moved somewhere else?
+    fn line_length(&self, buffer: &Rope, line: usize) -> usize {
+        // TODO: Make this not convert to a String (probably semi-inefficent)
+        let line = buffer.line(line).to_string();
+
+        // If the line ends with a newline, don't count it
+        if line.ends_with('\n') {
+            line.len() - 1
+        } else {
+            line.len()
+        }
+    }
+
+    // Returns the starting buffer index of a given line
+    // ? Should this be moved somewhere else?
+    fn line_start_index(&self, buffer: &Rope, line: usize) -> usize {
+        let mut index = 0;
+
+        for (i, line_text) in buffer.lines().enumerate() {
+            if i == line {
+                return index;
+            } else {
+                index += line_text.len_chars();
+            }
+        }
+
+        unreachable!("[INTERNAL ERROR] Attempted to get the start index of a line that doesn't exist")
     }
 
     // Converts a buffer coordinate to a cursor position
     // * This will need to be adjusted once scrolling/margins are implemented
-    fn get_cursor_coord_from_buffer_coord(&self, coordinate: usize) -> Result<(usize, usize)> {
+    // TODO: Update this for line-aware indexing
+    fn get_cursor_coord_from_buffer_index(&self, coordinate: usize) -> Result<(usize, usize)> {
         let cursor_x = coordinate % self.window_length as usize;
         let cursor_y = coordinate / self.window_length as usize;
         Ok((cursor_x, cursor_y))
