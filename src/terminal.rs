@@ -35,6 +35,21 @@ impl Terminal {
         }
     }
 
+    // [Direct] Initializes the Terminal
+    pub fn init(&self, buffer: &Rope) -> Result<()> {
+        // Enable raw mode
+        terminal::enable_raw_mode()?;
+
+        // Disable blinking cursor
+        execute!(stdout(), cursor::DisableBlinking)?;
+
+        // Clear the screen
+        self.full_clear()?;
+
+        // Draw the buffer
+        self.update(buffer)
+    }
+
     // [Direct] Performs a frame update, clearing the screen and redrawing the buffer
     pub fn update(&self, buffer: &Rope) -> Result<()> {
         // Clear everything after the buffer

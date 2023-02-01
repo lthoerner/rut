@@ -45,14 +45,8 @@ impl Editor {
 
     // Opens the editor in the terminal and runs the event loop
     pub fn run(&mut self) -> Result<()> {
-        // Enable raw mode for the terminal
-        terminal::enable_raw_mode()?;
-
-        // Clear the screen
-        self.terminal.full_clear()?;
-
-        // Draw the buffer
-        self.terminal.update(&self.buffer)?;
+        // Initialize the terminal
+        self.terminal.init(&self.buffer)?;
 
         // Start the event loop
         self.start_event_loop()
