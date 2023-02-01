@@ -3,7 +3,6 @@ use std::sync::{Arc, Mutex};
 use std::io::Seek;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
-use crossterm::terminal;
 use crossterm::Result;
 use ropey::Rope;
 
@@ -132,11 +131,8 @@ impl Editor {
 
     // [Direct] Closes the terminal and exits the program
     fn exit(&self) -> Result<()> {
-        // Disable raw mode so the terminal can be used normally
-        terminal::disable_raw_mode()?;
-
-        // Clear the screen
-        self.terminal.full_clear()?;
+        // Close the terminal
+        self.terminal.exit()?;
 
         // Exit the program
         std::process::exit(0);

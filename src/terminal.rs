@@ -51,7 +51,7 @@ impl Terminal {
     }
 
     // [Direct] Performs a frame update, clearing the screen and redrawing the buffer
-    pub fn update(&self, buffer: &Rope) -> Result<()> {
+    fn update(&self, buffer: &Rope) -> Result<()> {
         // Clear everything after the buffer
         self.partial_clear(buffer.len_chars())?;
 
@@ -78,7 +78,7 @@ impl Terminal {
     }
 
     // [Direct] Clears the entire terminal window
-    pub fn full_clear(&self) -> Result<()> {
+    fn full_clear(&self) -> Result<()> {
         self.clear(0, true)
     }
 
@@ -309,5 +309,17 @@ impl Terminal {
     // [Lazy] Resets the cursor to the top left of the terminal window
     fn reset_cursor(&self) -> Result<()> {
         queue!(stdout(), cursor::MoveTo(0, 0))
+    }
+
+    // [Direct] Exits the terminal window and sets it back to its normal behavior
+    pub fn exit(&self) -> Result<()> {
+        // Disable raw mode so the terminal can be used normally
+        terminal::disable_raw_mode()?;
+
+        // Re-enable cursor blinking
+        queue!(stdout(), cursor::EnableBlinking)?;
+
+        // Clear the screen
+        self.full_clear()
     }
 }
