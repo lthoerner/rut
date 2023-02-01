@@ -6,14 +6,14 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::Result;
 use ropey::Rope;
 
-use crate::terminal::{CursorMovement, Terminal};
+use crate::terminal::{CursorMovement, Terminal, TerminalState};
 
 // Represents the state of the editor
 // There should only be one instance of this struct at any given point
 pub struct Editor {
     file: Arc<Mutex<File>>,
     buffer: Rope,
-    terminal: Terminal,
+    terminal_state: TerminalState,
 }
 
 impl Editor {
@@ -33,19 +33,27 @@ impl Editor {
         // Store the file in an Arc<Mutex> so it can be shared between threads
         let file = Arc::new(Mutex::new(file));
 
-        let terminal = Terminal::new();
+        let terminal_state = TerminalState::new();
 
         Self {
             file,
             buffer,
-            terminal,
+            terminal_state,
+        }
+    }
+
+    // Gets a Terminal instance from the TerminalState
+    pub fn terminal(&mut self) -> Terminal {
+        Terminal {
+            state: &mut self.terminal_state,
+            buffer: &self.buffer,
         }
     }
 
     // Opens the editor in the terminal and runs the event loop
     pub fn run(&mut self) -> Result<()> {
         // Initialize the terminal
-        self.terminal.init(&self.buffer)?;
+        self.terminal().init()?;
 
         // Start the event loop
         self.start_event_loop()
@@ -87,10 +95,10 @@ impl Editor {
                 self.save()?;
             }
             // Handle arrow keypresses
-            (KeyCode::Up, KeyModifiers::NONE) => self.terminal.move_cursor(&self.buffer, Up)?,
-            (KeyCode::Down, KeyModifiers::NONE) => self.terminal.move_cursor(&self.buffer, Down)?,
-            (KeyCode::Left, KeyModifiers::NONE) => self.terminal.move_cursor(&self.buffer, Left)?,
-            (KeyCode::Right, KeyModifiers::NONE) => self.terminal.move_cursor(&self.buffer, Right)?,
+            (KeyCode::Up, KeyModifiers::NONE) => self.terminal().move_cursor(Up)?,
+            (KeyCode::Down, KeyModifiers::NONE) => self.terminal().move_cursor(Down)?,
+            (KeyCode::Left, KeyModifiers::NONE) => self.terminal().move_cursor(Left)?,
+            (KeyCode::Right, KeyModifiers::NONE) => self.terminal().move_cursor(Right)?,
             // Handle backspace
             (KeyCode::Backspace, KeyModifiers::NONE) => {
                 self.remove_char(false)?
@@ -117,7 +125,7 @@ impl Editor {
     pub fn insert_char(&mut self, character: char) -> Result<()> {
         // Get the buffer coordinate of the cursor
         // This should automatically avoid inserting characters outside of the buffer
-        let buffer_coordinate = match self.terminal.get_buffer_coord(&self.buffer)? {
+        let buffer_coordinate = match self.terminal().get_current_buffer_index()? {
             Some(coord) => coord,
             None => return Ok(()),
         };
@@ -126,10 +134,10 @@ impl Editor {
         self.buffer.insert_char(buffer_coordinate, character);
 
         // Perform a frame update
-        self.terminal.update(&self.buffer)?;
+        self.terminal().update()?;
 
         // Move the cursor right if the character is not a newline, and move it down if it is
-        self.terminal.move_cursor(&self.buffer, match character {
+        self.terminal().move_cursor(match character {
             '\n' => CursorMovement::Down,
             _ => CursorMovement::Right,
         })
@@ -140,7 +148,7 @@ impl Editor {
     pub fn remove_char(&mut self, delete_mode: bool) -> Result<()> {
         // Get the buffer coordinate of the cursor
         // This should automatically avoid deleting characters outside of the buffer
-        let buffer_coordinate = match self.terminal.get_buffer_coord(&self.buffer)? {
+        let buffer_coordinate = match self.terminal().get_current_buffer_index()? {
             Some(coord) => coord,
             None => return Ok(()),
         };
@@ -155,11 +163,11 @@ impl Editor {
         self.buffer.remove(remove_range);
 
         // Perform a frame update
-        self.terminal.update(&self.buffer)?;
+        self.terminal().update()?;
 
         // Move the cursor left (backspace) or leave it in the same place (delete)
         match delete_mode {
-            false => self.terminal.move_cursor(&self.buffer, CursorMovement::Left),
+            false => self.terminal().move_cursor(CursorMovement::Left),
             true => Ok(()),
         }
     }
@@ -195,9 +203,9 @@ impl Editor {
     }
 
     // [Direct] Closes the terminal and exits the program
-    fn exit(&self) -> Result<()> {
+    fn exit(&mut self) -> Result<()> {
         // Close the terminal
-        self.terminal.exit()?;
+        self.terminal().exit()?;
 
         // Exit the program
         std::process::exit(0);
