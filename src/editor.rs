@@ -103,6 +103,10 @@ impl Editor {
             (KeyCode::Delete, KeyModifiers::NONE) => {
                 self.terminal.remove_char(&mut self.buffer, true)?;
             },
+            // Handle normal characters
+            (KeyCode::Char(c), KeyModifiers::NONE) => {
+                self.terminal.insert_char(&mut self.buffer, c)?;
+            },
             _ => (),
         }
 

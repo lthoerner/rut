@@ -111,6 +111,26 @@ impl Terminal {
         self.move_cursor(CursorMovement::Left)
     }
 
+    // [Direct] Inserts a character into the buffer at the cursor position
+    pub fn insert_char(&self, buffer: &mut Rope, character: char) -> Result<()> {
+        let buffer_coordinate = self.get_buffer_coordinate()?;
+        let buffer_len = buffer.len_chars();
+
+        // Avoid inserting characters outside of the buffer
+        if buffer_coordinate > buffer_len {
+            return Ok(());
+        }
+
+        // Insert the character into the buffer
+        buffer.insert_char(buffer_coordinate, character);
+
+        // Perform a frame update
+        self.update(buffer, false)?;
+
+        // Move the cursor right
+        self.move_cursor(CursorMovement::Right)
+    }
+
     // [Direct] Moves the cursor in the terminal window, with wrapping
     pub fn move_cursor(&self, movement: CursorMovement) -> Result<()> {
         let (cursor_x, cursor_y) = cursor::position()?;
