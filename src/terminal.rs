@@ -15,6 +15,7 @@ pub struct Terminal {
     window_height: u16,
 }
 
+// Represents the direction of a cursor movement
 pub enum CursorMovement {
     Up,
     Down,
@@ -94,6 +95,7 @@ impl Terminal {
             },
         }
 
+        // The character to delete will either be before the cursor (backspace), or after (delete)
         let remove_range = match delete_mode {
             false => buffer_coordinate - 1..buffer_coordinate,
             true => buffer_coordinate..buffer_coordinate + 1,
