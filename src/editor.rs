@@ -96,17 +96,11 @@ impl Editor {
             (KeyCode::Left, KeyModifiers::NONE) => self.terminal.move_cursor(Left)?,
             (KeyCode::Right, KeyModifiers::NONE) => self.terminal.move_cursor(Right)?,
             // Handle backspace
-            (KeyCode::Backspace, KeyModifiers::NONE) => {
-                self.terminal.remove_char(&mut self.buffer, false)?;
-            },
+            (KeyCode::Backspace, KeyModifiers::NONE) => self.terminal.remove_char(&mut self.buffer, false)?,
             // Handle delete
-            (KeyCode::Delete, KeyModifiers::NONE) => {
-                self.terminal.remove_char(&mut self.buffer, true)?;
-            },
+            (KeyCode::Delete, KeyModifiers::NONE) => self.terminal.remove_char(&mut self.buffer, true)?,
             // Handle normal characters
-            (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => {
-                self.terminal.insert_char(&mut self.buffer, c)?;
-            },
+            (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => self.terminal.insert_char(&mut self.buffer, c)?,
             _ => (),
         }
 
