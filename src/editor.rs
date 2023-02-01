@@ -79,6 +79,8 @@ impl Editor {
 
     // Handles a KeyEvent using its code and modifiers
     fn handle_key_event(&mut self, event: KeyEvent) -> Result<()> {
+        use CursorMovement::*;
+
         match (event.code, event.modifiers) {
             // Exit the program on Ctrl+C
             (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
@@ -89,18 +91,10 @@ impl Editor {
                 self.save()?;
             },
             // Handle arrow keypresses
-            (KeyCode::Up, KeyModifiers::NONE) => {
-                self.terminal.move_cursor(CursorMovement::Up)?;
-            },
-            (KeyCode::Down, KeyModifiers::NONE) => {
-                self.terminal.move_cursor(CursorMovement::Down)?;
-            },
-            (KeyCode::Left, KeyModifiers::NONE) => {
-                self.terminal.move_cursor(CursorMovement::Left)?;
-            },
-            (KeyCode::Right, KeyModifiers::NONE) => {
-                self.terminal.move_cursor(CursorMovement::Right)?;
-            },
+            (KeyCode::Up, KeyModifiers::NONE) => self.terminal.move_cursor(Up)?,
+            (KeyCode::Down, KeyModifiers::NONE) => self.terminal.move_cursor(Down)?,
+            (KeyCode::Left, KeyModifiers::NONE) => self.terminal.move_cursor(Left)?,
+            (KeyCode::Right, KeyModifiers::NONE) => self.terminal.move_cursor(Right)?,
             // Handle backspace
             (KeyCode::Backspace, KeyModifiers::NONE) => {
                 self.terminal.remove_char(&mut self.buffer, false)?;
