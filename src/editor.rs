@@ -137,7 +137,7 @@ impl Editor {
         terminal::disable_raw_mode()?;
 
         // Clear the screen
-        self.terminal.clear(false, true)?;
+        self.terminal.clear(&self.buffer, false, true, true)?;
 
         // Exit the program
         std::process::exit(0);
