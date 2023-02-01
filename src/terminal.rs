@@ -136,8 +136,11 @@ impl Terminal {
         // Perform a frame update
         self.update(buffer)?;
 
-        // Move the cursor left
-        self.move_cursor(CursorMovement::Left)
+        // Move the cursor left (backspace) or leave it in the same place (delete)
+        match delete_mode {
+            false => self.move_cursor(CursorMovement::Left),
+            true => Ok(()),
+        }
     }
 
     // [Direct] Inserts a character into the buffer at the cursor position
