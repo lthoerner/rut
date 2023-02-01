@@ -183,12 +183,6 @@ impl Editor {
                 .lock()
                 .expect("[INTERNAL ERROR] Failed to acquire lock on file");
 
-            // Truncate and rewind the file
-            file.set_len(0)
-                .expect("[INTERNAL ERROR] Failed to truncate file");
-            file.rewind()
-                .expect("[INTERNAL ERROR] Failed to rewind file");
-
             // Write the buffer to the file
             buffer.write_to_file(&mut *file).expect("[INTERNAL ERROR] Failed to write to file");
         });
