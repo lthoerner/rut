@@ -1,5 +1,4 @@
 use std::fs::{File, OpenOptions};
-use std::io::Seek;
 use std::sync::{Arc, Mutex};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
