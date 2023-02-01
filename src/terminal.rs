@@ -217,11 +217,18 @@ impl Terminal {
     fn get_buffer_coord(&self, buffer: &Rope) -> Result<Option<usize>> {
         let (cursor_x, cursor_y) = self.get_cursor_position()?;
 
+        // Check for out-of-bounds errors for the cursor Y-coordinate
+        if cursor_y >= self.line_count(buffer) {
+            return Ok(None);
+        }
+
         // Get the length of the line the cursor is on
+        // This must be done after getting the line length to avoid crashing on out-of-bounds lines
+        // TODO: Write logic to prevent line_length() from crashing
         let line_length = self.line_length(buffer, cursor_y);
 
-        // Check for out-of-bounds errors for the cursor coordinates
-        if cursor_x > line_length || cursor_y >= self.line_count(buffer) {
+        // Check for out-of-bounds errors for the cursor X-coordinate
+        if cursor_x > line_length  {
             return Ok(None);
         }
 
