@@ -2,11 +2,11 @@
 
 use std::io::{stdout, Write};
 
-use crossterm::terminal;
 use crossterm::cursor;
 use crossterm::style::{Print, PrintStyledContent};
-use crossterm::{execute, queue};
+use crossterm::terminal;
 use crossterm::Result;
+use crossterm::{execute, queue};
 use ropey::Rope;
 
 // Represents the state of the terminal/cursor and implements methods for interacting with them
@@ -27,7 +27,8 @@ impl Terminal {
     // Create a new Terminal instance
     pub fn new() -> Self {
         // Get the terminal size
-        let (window_length, window_height) = terminal::size().expect("[INTERNAL ERROR] Failed to retrieve terminal size");
+        let (window_length, window_height) =
+            terminal::size().expect("[INTERNAL ERROR] Failed to retrieve terminal size");
 
         Self {
             window_length,
@@ -106,11 +107,18 @@ impl Terminal {
         } else {
             // Get the coordinate of the end of the buffer
             // ? Will this need to be adjusted based on the length of the insertion?
-            let (buffer_end_x, buffer_end_y) = self.get_cursor_coord_from_buffer_index(buffer_size)?;
+            let (buffer_end_x, buffer_end_y) =
+                self.get_cursor_coord_from_buffer_index(buffer_size)?;
 
             // Move the cursor to the end of the buffer and clear everything after it
-            queue!(stdout(), cursor::MoveTo(buffer_end_x as u16, buffer_end_y as u16))?;
-            queue!(stdout(), terminal::Clear(terminal::ClearType::FromCursorDown))?;
+            queue!(
+                stdout(),
+                cursor::MoveTo(buffer_end_x as u16, buffer_end_y as u16)
+            )?;
+            queue!(
+                stdout(),
+                terminal::Clear(terminal::ClearType::FromCursorDown)
+            )?;
         }
 
         // Restore the cursor position
@@ -188,7 +196,7 @@ impl Terminal {
                 } else {
                     return Ok(());
                 }
-            },
+            }
             Down => {
                 // Avoid moving cursor out of bounds
                 if cursor_y < self.window_height - 1 {
@@ -196,7 +204,7 @@ impl Terminal {
                 } else {
                     return Ok(());
                 }
-            },
+            }
             Left => {
                 // Avoid wrapping past the start of the screen
                 // * This might need to be changed once scrolling/margins are implemented
@@ -205,9 +213,12 @@ impl Terminal {
                 } else if cursor_x > 0 {
                     queue!(stdout(), cursor::MoveLeft(1))?;
                 } else {
-                    queue!(stdout(), cursor::MoveTo(self.window_length as u16, cursor_y - 1))?;
+                    queue!(
+                        stdout(),
+                        cursor::MoveTo(self.window_length as u16, cursor_y - 1)
+                    )?;
                 }
-            },
+            }
             Right => {
                 let max_x = self.window_length - 1;
                 let max_y = self.window_height - 1;
@@ -221,7 +232,7 @@ impl Terminal {
                 } else {
                     queue!(stdout(), cursor::MoveTo(0, cursor_y + 1))?;
                 }
-            },
+            }
         }
 
         stdout().flush()
@@ -243,7 +254,7 @@ impl Terminal {
         let line_length = self.line_length(buffer, cursor_y);
 
         // Check for out-of-bounds errors for the cursor X-coordinate
-        if cursor_x > line_length  {
+        if cursor_x > line_length {
             return Ok(None);
         }
 
@@ -288,7 +299,9 @@ impl Terminal {
             }
         }
 
-        unreachable!("[INTERNAL ERROR] Attempted to get the start index of a line that doesn't exist")
+        unreachable!(
+            "[INTERNAL ERROR] Attempted to get the start index of a line that doesn't exist"
+        )
     }
 
     // Converts a buffer coordinate to a cursor position

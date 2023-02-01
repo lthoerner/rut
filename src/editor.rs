@@ -1,12 +1,12 @@
 use std::fs::{File, OpenOptions};
-use std::sync::{Arc, Mutex};
 use std::io::Seek;
+use std::sync::{Arc, Mutex};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::Result;
 use ropey::Rope;
 
-use crate::terminal::{Terminal, CursorMovement};
+use crate::terminal::{CursorMovement, Terminal};
 
 // Represents the state of the editor
 // There should only be one instance of this struct at any given point
@@ -81,24 +81,32 @@ impl Editor {
             // Exit the program on Ctrl+C
             (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
                 self.exit()?;
-            },
+            }
             // Save the file on Ctrl+S
             (KeyCode::Char('s'), KeyModifiers::CONTROL) => {
                 self.save()?;
-            },
+            }
             // Handle arrow keypresses
             (KeyCode::Up, KeyModifiers::NONE) => self.terminal.move_cursor(Up)?,
             (KeyCode::Down, KeyModifiers::NONE) => self.terminal.move_cursor(Down)?,
             (KeyCode::Left, KeyModifiers::NONE) => self.terminal.move_cursor(Left)?,
             (KeyCode::Right, KeyModifiers::NONE) => self.terminal.move_cursor(Right)?,
             // Handle backspace
-            (KeyCode::Backspace, KeyModifiers::NONE) => self.terminal.remove_char(&mut self.buffer, false)?,
+            (KeyCode::Backspace, KeyModifiers::NONE) => {
+                self.terminal.remove_char(&mut self.buffer, false)?
+            }
             // Handle delete
-            (KeyCode::Delete, KeyModifiers::NONE) => self.terminal.remove_char(&mut self.buffer, true)?,
+            (KeyCode::Delete, KeyModifiers::NONE) => {
+                self.terminal.remove_char(&mut self.buffer, true)?
+            }
             // Handle enter
-            (KeyCode::Enter, KeyModifiers::NONE) => self.terminal.insert_char(&mut self.buffer, '\n')?,
+            (KeyCode::Enter, KeyModifiers::NONE) => {
+                self.terminal.insert_char(&mut self.buffer, '\n')?
+            }
             // Handle normal characters
-            (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => self.terminal.insert_char(&mut self.buffer, c)?,
+            (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => {
+                self.terminal.insert_char(&mut self.buffer, c)?
+            }
             _ => (),
         }
 
@@ -113,17 +121,23 @@ impl Editor {
 
         // Get a copy of the File reference to use it in the thread
         let file = self.file.clone();
-        
+
         std::thread::spawn(move || {
             // Acquire a lock on the file so it can be written to
-            let mut file = file.lock().expect("[INTERNAL ERROR] Failed to acquire lock on file");
+            let mut file = file
+                .lock()
+                .expect("[INTERNAL ERROR] Failed to acquire lock on file");
 
             // Truncate and rewind the file
-            file.set_len(0).expect("[INTERNAL ERROR] Failed to truncate file");
-            file.rewind().expect("[INTERNAL ERROR] Failed to rewind file");
+            file.set_len(0)
+                .expect("[INTERNAL ERROR] Failed to truncate file");
+            file.rewind()
+                .expect("[INTERNAL ERROR] Failed to rewind file");
 
             // Write the buffer to the file
-            buffer.write_to(&*file).expect("[INTERNAL ERROR] Failed to write to file");
+            buffer
+                .write_to(&*file)
+                .expect("[INTERNAL ERROR] Failed to write to file");
         });
 
         Ok(())
