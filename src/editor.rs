@@ -4,15 +4,15 @@ use std::sync::{Arc, Mutex};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::Result;
-use ropey::Rope;
 
 use crate::terminal::{CursorMovement, Terminal, TerminalState};
+use crate::buffer::Buffer;
 
 // Represents the state of the editor
 // There should only be one instance of this struct at any given point
 pub struct Editor {
     file: Arc<Mutex<File>>,
-    buffer: Rope,
+    buffer: Buffer,
     terminal_state: TerminalState,
 }
 
@@ -28,7 +28,7 @@ impl Editor {
             .expect("[INTERNAL ERROR] Failed to open file");
 
         // Read the file into a Rope
-        let buffer = Rope::from_reader(&file).unwrap();
+        let buffer = Buffer::new(&file);
 
         // Store the file in an Arc<Mutex> so it can be shared between threads
         let file = Arc::new(Mutex::new(file));
@@ -43,7 +43,7 @@ impl Editor {
     }
 
     // Gets a Terminal instance from the TerminalState
-    pub fn terminal(&mut self) -> Terminal {
+    fn terminal(&mut self) -> Terminal {
         Terminal {
             state: &mut self.terminal_state,
             buffer: &self.buffer,
@@ -122,16 +122,16 @@ impl Editor {
     }
 
     // [Direct] Inserts a character into the buffer at the cursor position
-    pub fn insert_char(&mut self, character: char) -> Result<()> {
+    fn insert_char(&mut self, character: char) -> Result<()> {
         // Get the buffer coordinate of the cursor
         // This should automatically avoid inserting characters outside of the buffer
-        let buffer_coordinate = match self.terminal().get_current_buffer_index()? {
+        let buffer_coordinate = match self.terminal().get_current_buffer_index() {
             Some(coord) => coord,
             None => return Ok(()),
         };
 
         // Insert the character into the buffer
-        self.buffer.insert_char(buffer_coordinate, character);
+        self.buffer.insert(buffer_coordinate, character);
 
         // Perform a frame update
         self.terminal().update()?;
@@ -145,22 +145,20 @@ impl Editor {
 
     // [Direct] Deletes the character in the buffer immediately preceding the cursor,
     // or alternatively immediately after the cursor (delete_mode)
-    pub fn remove_char(&mut self, delete_mode: bool) -> Result<()> {
+    fn remove_char(&mut self, delete_mode: bool) -> Result<()> {
         // Get the buffer coordinate of the cursor
         // This should automatically avoid deleting characters outside of the buffer
-        let buffer_coordinate = match self.terminal().get_current_buffer_index()? {
+        let buffer_coordinate = match self.terminal().get_current_buffer_index() {
             Some(coord) => coord,
             None => return Ok(()),
         };
 
-        // The character to delete will either be before the cursor (backspace), or after (delete)
-        let remove_range = match delete_mode {
-            false => buffer_coordinate - 1..buffer_coordinate,
-            true => buffer_coordinate..buffer_coordinate + 1,
-        };
-
         // Delete the character in the buffer
-        self.buffer.remove(remove_range);
+        // The character to delete will either be before the cursor (backspace), or after (delete)
+        self.buffer.delete(match delete_mode {
+            true => buffer_coordinate,
+            false => buffer_coordinate - 1,
+        });
 
         // Perform a frame update
         self.terminal().update()?;
@@ -194,9 +192,7 @@ impl Editor {
                 .expect("[INTERNAL ERROR] Failed to rewind file");
 
             // Write the buffer to the file
-            buffer
-                .write_to(&*file)
-                .expect("[INTERNAL ERROR] Failed to write to file");
+            buffer.write_to_file(&mut *file).expect("[INTERNAL ERROR] Failed to write to file");
         });
 
         Ok(())

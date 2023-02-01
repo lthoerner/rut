@@ -1,5 +1,3 @@
-// #![allow(dead_code, unused_imports)]
-
 use std::io::{stdout, Write};
 
 use crossterm::cursor;
@@ -7,7 +5,8 @@ use crossterm::style::Print;
 use crossterm::terminal;
 use crossterm::Result;
 use crossterm::{execute, queue};
-use ropey::Rope;
+
+use crate::buffer::Buffer;
 
 // Encapsulates TerminalState and implements methods for interacting with the terminal
 // This contains a reference to the buffer because many indexing operations need to be buffer-aware,
@@ -15,7 +14,7 @@ use ropey::Rope;
 // that is working on the buffer, not the terminal
 pub struct Terminal<'a> {
     pub state: &'a mut TerminalState,
-    pub buffer: &'a Rope,
+    pub buffer: &'a Buffer,
 }
 
 // Represents the state of the terminal/cursor
@@ -120,7 +119,7 @@ impl Terminal<'_> {
             // Get the coordinate of the end of the buffer
             // ? Will this need to be adjusted based on the length of the insertion?
             let (buffer_end_x, buffer_end_y) =
-                self.get_cursor_coord_from_buffer_index(self.buffer.len_chars())?;
+                self.get_cursor_coord_from_buffer_index(self.buffer.size())?;
 
             // Move the cursor to the end of the buffer and clear everything after it
             queue!(
@@ -178,7 +177,7 @@ impl Terminal<'_> {
                     queue!(
                         stdout(),
                         // ? Is there a better way to do this without two type casts?
-                        cursor::MoveTo(self.line_length(previous_line as usize) as u16, previous_line)
+                        cursor::MoveTo(self.buffer.line_length(previous_line as usize) as u16, previous_line)
                     )?;
                 }
             }
@@ -200,74 +199,7 @@ impl Terminal<'_> {
 
         stdout().flush()
     }
-
-    // Converts a cursor position to a buffer coordinate
-    // * This will need to be adjusted once scrolling/margins are implemented
-    // ? Should this just return Result<usize>?
-    pub fn get_current_buffer_index(&self) -> Result<Option<usize>> {
-        let (cursor_x, cursor_y) = self.get_cursor_position()?;
-
-        // Check for out-of-bounds errors for the cursor Y-coordinate
-        if cursor_y >= self.line_count(self.buffer) {
-            return Ok(None);
-        }
-
-        // Get the length of the line the cursor is on
-        // This must be done after getting the line length to avoid crashing on out-of-bounds lines
-        // TODO: Write logic to prevent line_length() from crashing
-        let line_length = self.line_length(cursor_y);
-
-        // Check for out-of-bounds errors for the cursor X-coordinate
-        if cursor_x > line_length {
-            return Ok(None);
-        }
-
-        // Get the starting buffer index of the line the cursor is on
-        let line_start = self.line_start_index(cursor_y);
-
-        // Get the buffer index of the cursor
-        Ok(Some(line_start + cursor_x))
-    }
-
-    // Returns the number of lines in the buffer
-    // ? Should this be moved somewhere else?
-    fn line_count(&self, buffer: &Rope) -> usize {
-        buffer.len_lines()
-    }
-
-    // Returns the length (end X-coordinate) of a line in the buffer
-    // ? Should this be moved somewhere else?
-    fn line_length(&self, line: usize) -> usize {
-        // TODO: Make this not convert to a String (probably semi-inefficent)
-        let line = self.buffer.line(line).to_string();
-
-        // If the line ends with a newline, don't count it
-        if line.ends_with('\n') {
-            line.len() - 1
-        } else {
-            line.len()
-        }
-    }
-
-    // Returns the starting buffer index of a given line
-    // ! What happens if a line is wrapped to a new line?
-    // ? Should this be moved somewhere else?
-    fn line_start_index(&self, line: usize) -> usize {
-        let mut index = 0;
-
-        for (i, line_text) in self.buffer.lines().enumerate() {
-            if i == line {
-                return index;
-            } else {
-                index += line_text.len_chars();
-            }
-        }
-
-        unreachable!(
-            "[INTERNAL ERROR] Attempted to get the start index of a line that doesn't exist"
-        )
-    }
-
+    
     // Converts a buffer coordinate to a cursor position
     // * This will need to be adjusted once scrolling/margins are implemented
     // TODO: Update this for line-aware indexing
@@ -277,10 +209,15 @@ impl Terminal<'_> {
         Ok((cursor_x, cursor_y))
     }
 
+    // Gets the current buffer index using the current cursor position
+    pub fn get_current_buffer_index(&self) -> Option<usize> {
+        self.buffer.get_buffer_index(self.cursor_position())
+    }
+
     // Essentially the same as cursor::position(), but returns usize instead of u16
-    fn get_cursor_position(&self) -> Result<(usize, usize)> {
-        let position = cursor::position()?;
-        Ok((position.0 as usize, position.1 as usize))
+    fn cursor_position(&self) -> (usize, usize) {
+        let position = cursor::position().expect("[INTERNAL ERROR] Failed to get cursor position");
+        (position.0 as usize, position.1 as usize)
     }
 
     // [Lazy] Resets the cursor to the top left of the terminal window

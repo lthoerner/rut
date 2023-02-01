@@ -2,6 +2,7 @@ use crossterm::Result;
 
 mod editor;
 mod terminal;
+mod buffer;
 
 use editor::Editor;
 
