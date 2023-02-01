@@ -48,8 +48,11 @@ impl Editor {
         // Enable raw mode for the terminal
         terminal::enable_raw_mode()?;
 
-        // Clear the screen and draw the buffer
-        self.terminal.update(&self.buffer, true)?;
+        // Clear the screen
+        self.terminal.full_clear()?;
+
+        // Draw the buffer
+        self.terminal.update(&self.buffer)?;
 
         // Start the event loop
         self.start_event_loop()
@@ -137,7 +140,7 @@ impl Editor {
         terminal::disable_raw_mode()?;
 
         // Clear the screen
-        self.terminal.clear(&self.buffer, false, true, true)?;
+        self.terminal.full_clear()?;
 
         // Exit the program
         std::process::exit(0);

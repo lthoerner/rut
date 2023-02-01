@@ -36,9 +36,9 @@ impl Terminal {
     }
 
     // [Direct] Performs a frame update, clearing the screen and redrawing the buffer
-    pub fn update(&self, buffer: &Rope, reset_cursor: bool) -> Result<()> {
-        // Clear the screen
-        self.clear(&buffer, !reset_cursor, false, false)?;
+    pub fn update(&self, buffer: &Rope) -> Result<()> {
+        // Clear everything after the buffer
+        self.partial_clear(buffer.len_chars())?;
 
         // Save the position of the cursor
         // This could be be either the position of the cursor at the start of the frame update,
@@ -49,7 +49,7 @@ impl Terminal {
         // This may seem unnecessary, but it is actually required because if the cursor position
         // is not being reset, then the buffer would otherwise be drawn starting at the cursor position,
         // which would offset the entire frame
-        queue!(stdout(), cursor::MoveTo(0, 0))?;
+        self.reset_cursor()?;
 
         // Draw the buffer, making sure to carriage return after each line
         for line in buffer.lines() {
@@ -62,13 +62,22 @@ impl Terminal {
         stdout().flush()
     }
 
-    // ! FIX THIS METHOD (too many parameters and crap)
-    // [Lazy/Direct] Clears the terminal window, either entirely or just the portion after the buffer
-    pub fn clear(&self, buffer: &Rope, keep_cursor_pos: bool, direct_execute: bool, full_clear: bool) -> Result<()> {
+    // [Direct] Clears the entire terminal window
+    pub fn full_clear(&self) -> Result<()> {
+        self.clear(0, true)
+    }
+
+    // [Lazy] Clears the terminal window after the buffer, preserving the cursor position
+    fn partial_clear(&self, buffer_size: usize) -> Result<()> {
+        self.clear(buffer_size, false)
+    }
+
+    // [Lazy/Direct] Clears the terminal window, either entirely (full clear) or just the portion after the buffer
+    fn clear(&self, buffer_size: usize, full_clear: bool) -> Result<()> {
         // The default behavior of terminal::Clear is to maintain the cursor position
         // If the user wants to reset the cursor position, it needs to be done manually
-        if !keep_cursor_pos {
-            queue!(stdout(), cursor::MoveTo(0, 0))?;
+        if full_clear {
+            self.reset_cursor()?;
         }
 
         // Save the cursor position, which could either be (0, 0) for a
@@ -81,19 +90,18 @@ impl Terminal {
             queue!(stdout(), terminal::Clear(terminal::ClearType::All))?;
         } else {
             // Get the coordinate of the end of the buffer
-            let (buffer_end_x, buffer_end_y) = self.get_cursor_position_from_coordinate(buffer.len_chars())?;
+            // ? Will this need to be adjusted based on the length of the insertion?
+            let (buffer_end_x, buffer_end_y) = self.get_cursor_coord_from_buffer_coord(buffer_size)?;
 
-            // Move the cursor to the end of the buffer
+            // Move the cursor to the end of the buffer and clear everything after it
             queue!(stdout(), cursor::MoveTo(buffer_end_x as u16, buffer_end_y as u16))?;
-
-            // Clear the portion of the screen after the buffer
             queue!(stdout(), terminal::Clear(terminal::ClearType::FromCursorDown))?;
         }
 
         // Restore the cursor position
         queue!(stdout(), cursor::RestorePosition)?;
 
-        if direct_execute {
+        if full_clear {
             stdout().flush()?;
         }
 
@@ -103,7 +111,7 @@ impl Terminal {
     // [Direct] Deletes the character in the buffer immediately preceding the cursor,
     // or alternatively immediately after the cursor (delete_mode)
     pub fn remove_char(&self, buffer: &mut Rope, delete_mode: bool) -> Result<()> {
-        let buffer_coordinate = self.get_buffer_coordinate()?;
+        let buffer_coordinate = self.get_buffer_coord()?;
         let buffer_len = buffer.len_chars();
 
         // Avoid deleting characters outside of the buffer
@@ -126,7 +134,7 @@ impl Terminal {
         buffer.remove(remove_range);
 
         // Perform a frame update
-        self.update(buffer, false)?;
+        self.update(buffer)?;
 
         // Move the cursor left
         self.move_cursor(CursorMovement::Left)
@@ -134,7 +142,7 @@ impl Terminal {
 
     // [Direct] Inserts a character into the buffer at the cursor position
     pub fn insert_char(&self, buffer: &mut Rope, character: char) -> Result<()> {
-        let buffer_coordinate = self.get_buffer_coordinate()?;
+        let buffer_coordinate = self.get_buffer_coord()?;
         let buffer_len = buffer.len_chars();
 
         // Avoid inserting characters outside of the buffer
@@ -146,7 +154,7 @@ impl Terminal {
         buffer.insert_char(buffer_coordinate, character);
 
         // Perform a frame update
-        self.update(buffer, false)?;
+        self.update(buffer)?;
 
         // Move the cursor right
         self.move_cursor(CursorMovement::Right)
@@ -207,14 +215,14 @@ impl Terminal {
 
     // Converts a cursor position to a buffer coordinate
     // * This will need to be adjusted once scrolling/margins are implemented
-    fn get_buffer_coordinate(&self) -> Result<usize> {
+    fn get_buffer_coord(&self) -> Result<usize> {
         let (cursor_x, cursor_y) = self.get_cursor_position()?;
         Ok(cursor_y * self.window_length as usize + cursor_x)
     }
 
     // Converts a buffer coordinate to a cursor position
     // * This will need to be adjusted once scrolling/margins are implemented
-    fn get_cursor_position_from_coordinate(&self, coordinate: usize) -> Result<(usize, usize)> {
+    fn get_cursor_coord_from_buffer_coord(&self, coordinate: usize) -> Result<(usize, usize)> {
         let cursor_x = coordinate % self.window_length as usize;
         let cursor_y = coordinate / self.window_length as usize;
         Ok((cursor_x, cursor_y))
@@ -224,5 +232,10 @@ impl Terminal {
     fn get_cursor_position(&self) -> Result<(usize, usize)> {
         let position = cursor::position()?;
         Ok((position.0 as usize, position.1 as usize))
+    }
+
+    // [Lazy] Resets the cursor to the top left of the terminal window
+    fn reset_cursor(&self) -> Result<()> {
+        queue!(stdout(), cursor::MoveTo(0, 0))
     }
 }
