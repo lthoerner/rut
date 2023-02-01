@@ -260,6 +260,7 @@ impl Terminal {
     }
 
     // Returns the starting buffer index of a given line
+    // ! What happens if a line is wrapped to a new line?
     // ? Should this be moved somewhere else?
     fn line_start_index(&self, buffer: &Rope, line: usize) -> usize {
         let mut index = 0;
