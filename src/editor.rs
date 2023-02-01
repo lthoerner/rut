@@ -87,30 +87,81 @@ impl Editor {
                 self.save()?;
             }
             // Handle arrow keypresses
-            (KeyCode::Up, KeyModifiers::NONE) => self.terminal.move_cursor(Up)?,
-            (KeyCode::Down, KeyModifiers::NONE) => self.terminal.move_cursor(Down)?,
-            (KeyCode::Left, KeyModifiers::NONE) => self.terminal.move_cursor(Left)?,
-            (KeyCode::Right, KeyModifiers::NONE) => self.terminal.move_cursor(Right)?,
+            (KeyCode::Up, KeyModifiers::NONE) => self.terminal.move_cursor(&self.buffer, Up)?,
+            (KeyCode::Down, KeyModifiers::NONE) => self.terminal.move_cursor(&self.buffer, Down)?,
+            (KeyCode::Left, KeyModifiers::NONE) => self.terminal.move_cursor(&self.buffer, Left)?,
+            (KeyCode::Right, KeyModifiers::NONE) => self.terminal.move_cursor(&self.buffer, Right)?,
             // Handle backspace
             (KeyCode::Backspace, KeyModifiers::NONE) => {
-                self.terminal.remove_char(&mut self.buffer, false)?
+                self.remove_char(false)?
             }
             // Handle delete
             (KeyCode::Delete, KeyModifiers::NONE) => {
-                self.terminal.remove_char(&mut self.buffer, true)?
+                self.remove_char(true)?
             }
             // Handle enter
             (KeyCode::Enter, KeyModifiers::NONE) => {
-                self.terminal.insert_char(&mut self.buffer, '\n')?
+                self.insert_char('\n')?
             }
             // Handle normal characters
             (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => {
-                self.terminal.insert_char(&mut self.buffer, c)?
+                self.insert_char(c)?
             }
             _ => (),
         }
 
         Ok(())
+    }
+
+    // [Direct] Inserts a character into the buffer at the cursor position
+    pub fn insert_char(&mut self, character: char) -> Result<()> {
+        // Get the buffer coordinate of the cursor
+        // This should automatically avoid inserting characters outside of the buffer
+        let buffer_coordinate = match self.terminal.get_buffer_coord(&self.buffer)? {
+            Some(coord) => coord,
+            None => return Ok(()),
+        };
+
+        // Insert the character into the buffer
+        self.buffer.insert_char(buffer_coordinate, character);
+
+        // Perform a frame update
+        self.terminal.update(&self.buffer)?;
+
+        // Move the cursor right if the character is not a newline, and move it down if it is
+        self.terminal.move_cursor(&self.buffer, match character {
+            '\n' => CursorMovement::Down,
+            _ => CursorMovement::Right,
+        })
+    }
+
+    // [Direct] Deletes the character in the buffer immediately preceding the cursor,
+    // or alternatively immediately after the cursor (delete_mode)
+    pub fn remove_char(&mut self, delete_mode: bool) -> Result<()> {
+        // Get the buffer coordinate of the cursor
+        // This should automatically avoid deleting characters outside of the buffer
+        let buffer_coordinate = match self.terminal.get_buffer_coord(&self.buffer)? {
+            Some(coord) => coord,
+            None => return Ok(()),
+        };
+
+        // The character to delete will either be before the cursor (backspace), or after (delete)
+        let remove_range = match delete_mode {
+            false => buffer_coordinate - 1..buffer_coordinate,
+            true => buffer_coordinate..buffer_coordinate + 1,
+        };
+
+        // Delete the character in the buffer
+        self.buffer.remove(remove_range);
+
+        // Perform a frame update
+        self.terminal.update(&self.buffer)?;
+
+        // Move the cursor left (backspace) or leave it in the same place (delete)
+        match delete_mode {
+            false => self.terminal.move_cursor(&self.buffer, CursorMovement::Left),
+            true => Ok(()),
+        }
     }
 
     // [Direct] Saves the buffer to the file

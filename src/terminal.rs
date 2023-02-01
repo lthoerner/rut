@@ -52,7 +52,7 @@ impl Terminal {
     }
 
     // [Direct] Performs a frame update, clearing the screen and redrawing the buffer
-    fn update(&self, buffer: &Rope) -> Result<()> {
+    pub fn update(&self, buffer: &Rope) -> Result<()> {
         // Clear everything after the buffer
         self.partial_clear(buffer.len_chars())?;
 
@@ -131,59 +131,8 @@ impl Terminal {
         Ok(())
     }
 
-    // [Direct] Deletes the character in the buffer immediately preceding the cursor,
-    // or alternatively immediately after the cursor (delete_mode)
-    pub fn remove_char(&self, buffer: &mut Rope, delete_mode: bool) -> Result<()> {
-        // Get the buffer coordinate of the cursor
-        // This should automatically avoid deleting characters outside of the buffer
-        let buffer_coordinate = match self.get_buffer_coord(buffer)? {
-            Some(coord) => coord,
-            None => return Ok(()),
-        };
-
-        // The character to delete will either be before the cursor (backspace), or after (delete)
-        let remove_range = match delete_mode {
-            false => buffer_coordinate - 1..buffer_coordinate,
-            true => buffer_coordinate..buffer_coordinate + 1,
-        };
-
-        // Delete the character in the buffer
-        buffer.remove(remove_range);
-
-        // Perform a frame update
-        self.update(buffer)?;
-
-        // Move the cursor left (backspace) or leave it in the same place (delete)
-        match delete_mode {
-            false => self.move_cursor(CursorMovement::Left),
-            true => Ok(()),
-        }
-    }
-
-    // [Direct] Inserts a character into the buffer at the cursor position
-    pub fn insert_char(&self, buffer: &mut Rope, character: char) -> Result<()> {
-        // Get the buffer coordinate of the cursor
-        // This should automatically avoid inserting characters outside of the buffer
-        let buffer_coordinate = match self.get_buffer_coord(buffer)? {
-            Some(coord) => coord,
-            None => return Ok(()),
-        };
-
-        // Insert the character into the buffer
-        buffer.insert_char(buffer_coordinate, character);
-
-        // Perform a frame update
-        self.update(buffer)?;
-
-        // Move the cursor right if the character is not a newline, and move it down if it is
-        self.move_cursor(match character {
-            '\n' => CursorMovement::Down,
-            _ => CursorMovement::Right,
-        })
-    }
-
     // [Direct] Moves the cursor in the terminal window, with wrapping
-    pub fn move_cursor(&self, movement: CursorMovement) -> Result<()> {
+    pub fn move_cursor(&self, buffer: &Rope, movement: CursorMovement) -> Result<()> {
         let (cursor_x, cursor_y) = cursor::position()?;
 
         use CursorMovement::*;
@@ -213,9 +162,10 @@ impl Terminal {
                 } else if cursor_x > 0 {
                     queue!(stdout(), cursor::MoveLeft(1))?;
                 } else {
+                    let previous_line = cursor_y - 1;
                     queue!(
                         stdout(),
-                        cursor::MoveTo(self.window_length as u16, cursor_y - 1)
+                        cursor::MoveTo(self.line_length(buffer, previous_line as usize) as u16, previous_line)
                     )?;
                 }
             }
@@ -240,7 +190,8 @@ impl Terminal {
 
     // Converts a cursor position to a buffer coordinate
     // * This will need to be adjusted once scrolling/margins are implemented
-    fn get_buffer_coord(&self, buffer: &Rope) -> Result<Option<usize>> {
+    // ? Should this just return Result<usize>?
+    pub fn get_buffer_coord(&self, buffer: &Rope) -> Result<Option<usize>> {
         let (cursor_x, cursor_y) = self.get_cursor_position()?;
 
         // Check for out-of-bounds errors for the cursor Y-coordinate
