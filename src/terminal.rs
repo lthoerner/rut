@@ -136,7 +136,7 @@ impl Terminal {
             },
             Left => {
                 // Avoid wrapping past the start of the screen
-                // * This might need to be changed once scrolling is implemented
+                // * This might need to be changed once scrolling/margins are implemented
                 if cursor_x == 0 && cursor_y == 0 {
                     return Ok(());
                 } else if cursor_x > 0 {
@@ -150,7 +150,7 @@ impl Terminal {
                 let max_y = self.window_height - 1;
 
                 // Avoid wrapping past the start of the screen
-                // * This might need to be changed once scrolling is implemented
+                // * This might need to be changed once scrolling/margins are implemented
                 if cursor_x == max_x && cursor_y == max_y {
                     return Ok(());
                 } else if cursor_x < max_x {
@@ -165,6 +165,7 @@ impl Terminal {
     }
 
     // Converts a cursor position to a buffer coordinate
+    // * This will need to be adjusted once scrolling/margins are implemented
     fn get_buffer_coordinate(&self) -> Result<usize> {
         let (cursor_x, cursor_y) = self.get_cursor_position()?;
         Ok(cursor_y * self.window_length as usize + cursor_x)
