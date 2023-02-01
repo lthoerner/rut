@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
 use crossterm::Result;
 
-use crate::terminal::{CursorMovement, Terminal, TerminalState};
+use crate::terminal::{Terminal, TerminalState};
 use crate::buffer::Buffer;
 
 // Represents the state of the editor
@@ -83,8 +83,6 @@ impl Editor {
 
     // Handles a KeyEvent using its code and modifiers
     fn handle_key_event(&mut self, event: KeyEvent) -> Result<()> {
-        use CursorMovement::*;
-
         match (event.code, event.modifiers) {
             // Exit the program on Ctrl+C
             (KeyCode::Char('c'), KeyModifiers::CONTROL) => {
@@ -95,10 +93,10 @@ impl Editor {
                 self.save()?;
             }
             // Handle arrow keypresses
-            (KeyCode::Up, KeyModifiers::NONE) => self.terminal().move_cursor(Up)?,
-            (KeyCode::Down, KeyModifiers::NONE) => self.terminal().move_cursor(Down)?,
-            (KeyCode::Left, KeyModifiers::NONE) => self.terminal().move_cursor(Left)?,
-            (KeyCode::Right, KeyModifiers::NONE) => self.terminal().move_cursor(Right)?,
+            (KeyCode::Up, KeyModifiers::NONE) => self.terminal().move_cursor_up()?,
+            (KeyCode::Down, KeyModifiers::NONE) => self.terminal().move_cursor_down()?,
+            (KeyCode::Left, KeyModifiers::NONE) => self.terminal().move_cursor_left()?,
+            (KeyCode::Right, KeyModifiers::NONE) => self.terminal().move_cursor_right()?,
             // Handle backspace
             (KeyCode::Backspace, KeyModifiers::NONE) => {
                 self.remove_char(false)?
@@ -137,10 +135,10 @@ impl Editor {
         self.terminal().update()?;
 
         // Move the cursor right if the character is not a newline, and move it down if it is
-        self.terminal().move_cursor(match character {
-            '\n' => CursorMovement::Down,
-            _ => CursorMovement::Right,
-        })
+        match character {
+            '\n' => self.terminal().move_cursor_down(),
+            _ => self.terminal().move_cursor_right(),
+        }
     }
 
     // [Direct] Deletes the character in the buffer immediately preceding the cursor,
@@ -165,7 +163,7 @@ impl Editor {
 
         // Move the cursor left (backspace) or leave it in the same place (delete)
         match delete_mode {
-            false => self.terminal().move_cursor(CursorMovement::Left),
+            false => self.terminal().move_cursor_left(),
             true => Ok(()),
         }
     }

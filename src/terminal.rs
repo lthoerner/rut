@@ -23,15 +23,6 @@ pub struct TerminalState {
     window_height: u16,
 }
 
-// Represents the direction of a cursor movement
-// ? Does this really need to exist?
-pub enum CursorMovement {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-
 impl TerminalState {
     // Create a new Terminal instance
     pub fn new() -> Self {
@@ -142,59 +133,74 @@ impl Terminal<'_> {
         Ok(())
     }
 
-    // [Direct] Moves the cursor in the terminal window, with wrapping
-    pub fn move_cursor(&self, movement: CursorMovement) -> Result<()> {
-        let (cursor_x, cursor_y) = cursor::position()?;
+    // [Direct] Moves the cursor up
+    pub fn move_cursor_up(&self) -> Result<()> {
+        let (_, cursor_y) = self.cursor_position();
 
-        use CursorMovement::*;
+        // Avoid moving cursor out of bounds
+        // If the cursor should not be moved, return early to prevent unnecessary flush
+        if cursor_y > 0 {
+            queue!(stdout(), cursor::MoveUp(1))?;
+        } else {
+            // ? Is there a better way to do this?
+            return Ok(());
+        }
 
-        match movement {
-            Up => {
-                // Avoid moving cursor out of bounds
-                if cursor_y > 0 {
-                    queue!(stdout(), cursor::MoveUp(1))?;
-                } else {
-                    return Ok(());
-                }
-            }
-            Down => {
-                // Avoid moving cursor out of bounds
-                if cursor_y < self.state.window_height - 1 {
-                    queue!(stdout(), cursor::MoveDown(1))?;
-                } else {
-                    return Ok(());
-                }
-            }
-            Left => {
-                // Avoid wrapping past the start of the screen
-                // * This might need to be changed once scrolling/margins are implemented
-                if cursor_x == 0 && cursor_y == 0 {
-                    return Ok(());
-                } else if cursor_x > 0 {
-                    queue!(stdout(), cursor::MoveLeft(1))?;
-                } else {
-                    let previous_line = cursor_y - 1;
-                    queue!(
-                        stdout(),
-                        // ? Is there a better way to do this without two type casts?
-                        cursor::MoveTo(self.buffer.line_length(previous_line as usize) as u16, previous_line)
-                    )?;
-                }
-            }
-            Right => {
-                let max_x = self.state.window_length - 1;
-                let max_y = self.state.window_height - 1;
+        stdout().flush()
+    }
 
-                // Avoid wrapping past the start of the screen
-                // * This might need to be changed once scrolling/margins are implemented
-                if cursor_x == max_x && cursor_y == max_y {
-                    return Ok(());
-                } else if cursor_x < max_x {
-                    queue!(stdout(), cursor::MoveRight(1))?;
-                } else {
-                    queue!(stdout(), cursor::MoveTo(0, cursor_y + 1))?;
-                }
-            }
+    // [Direct] Moves the cursor down
+    pub fn move_cursor_down(&self) -> Result<()> {
+        let (_, cursor_y) = self.cursor_position();
+
+        // Avoid moving cursor out of bounds
+        // If the cursor should not be moved, return early to prevent unnecessary flush
+        if cursor_y < self.state.window_height as usize - 1 {
+            queue!(stdout(), cursor::MoveDown(1))?;
+        } else {
+            return Ok(());
+        }
+
+        stdout().flush()
+    }
+
+    // [Direct] Moves the cursor left
+    pub fn move_cursor_left(&self) -> Result<()> {
+        let (cursor_x, cursor_y) = self.cursor_position();
+
+        // Avoid wrapping past the start of the screen
+        // * This might need to be changed once scrolling/margins are implemented
+        if cursor_x == 0 && cursor_y == 0 {
+            return Ok(());
+        } else if cursor_x > 0 {
+            queue!(stdout(), cursor::MoveLeft(1))?;
+        } else {
+            let previous_line = cursor_y - 1;
+            queue!(
+                stdout(),
+                // ? Is there a better way to do this without two type casts?
+                cursor::MoveTo(self.buffer.line_length(previous_line) as u16, previous_line as u16)
+            )?;
+        }
+
+        stdout().flush()
+    }
+
+    // [Direct] Moves the cursor right
+    pub fn move_cursor_right(&self) -> Result<()> {
+        let (cursor_x, cursor_y) = self.cursor_position();
+
+        let max_x = self.state.window_length as usize - 1;
+        let max_y = self.state.window_height as usize - 1;
+
+        // Avoid wrapping past the start of the screen
+        // * This might need to be changed once scrolling/margins are implemented
+        if cursor_x == max_x && cursor_y == max_y {
+            return Ok(());
+        } else if cursor_x < max_x {
+            queue!(stdout(), cursor::MoveRight(1))?;
+        } else {
+            queue!(stdout(), cursor::MoveTo(0, (cursor_y + 1) as u16))?;
         }
 
         stdout().flush()
