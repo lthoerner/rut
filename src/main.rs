@@ -1,10 +1,12 @@
 use crossterm::Result;
 
+mod buffer;
 mod editor;
 mod terminal;
-mod buffer;
 
+use buffer::Buffer;
 use editor::Editor;
+use terminal::Terminal;
 
 fn main() -> Result<()> {
     // Make sure the user has provided one argument (filename to open)

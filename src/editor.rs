@@ -1,18 +1,22 @@
-use std::fs::{File, OpenOptions};
-use std::sync::{Arc, Mutex};
+use std::{
+    fs::{File, OpenOptions},
+    sync::{Arc, Mutex},
+};
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyModifiers};
-use crossterm::Result;
+use crossterm::{
+    event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
+    Result,
+};
 
-use crate::terminal::{Terminal, TerminalState};
-use crate::buffer::Buffer;
+use crate::Buffer;
+use crate::Terminal;
 
 // Represents the state of the editor
 // There should only be one instance of this struct at any given point
 pub struct Editor {
     file: Arc<Mutex<File>>,
     buffer: Buffer,
-    terminal_state: TerminalState,
+    terminal: Terminal,
 }
 
 impl Editor {
@@ -32,27 +36,23 @@ impl Editor {
         // Store the file in an Arc<Mutex> so it can be shared between threads
         let file = Arc::new(Mutex::new(file));
 
-        let terminal_state = TerminalState::new();
+        // Create the terminal
+        let terminal = Terminal::new();
 
         Self {
             file,
             buffer,
-            terminal_state,
-        }
-    }
-
-    // Gets a Terminal instance from the TerminalState
-    fn terminal(&mut self) -> Terminal {
-        Terminal {
-            state: &mut self.terminal_state,
-            buffer: &self.buffer,
+            terminal,
         }
     }
 
     // Opens the editor in the terminal and runs the event loop
     pub fn run(&mut self) -> Result<()> {
-        // Initialize the terminal
-        self.terminal().init()?;
+        // Open the terminal
+        self.terminal.open()?;
+
+        // Draw the initial buffer
+        self.terminal.update(&self.buffer)?;
 
         // Start the event loop
         self.start_event_loop()
@@ -92,26 +92,18 @@ impl Editor {
                 self.save()?;
             }
             // Handle arrow keypresses
-            (KeyCode::Up, KeyModifiers::NONE) => self.terminal().move_cursor_up()?,
-            (KeyCode::Down, KeyModifiers::NONE) => self.terminal().move_cursor_down()?,
-            (KeyCode::Left, KeyModifiers::NONE) => self.terminal().move_cursor_left()?,
-            (KeyCode::Right, KeyModifiers::NONE) => self.terminal().move_cursor_right()?,
+            (KeyCode::Up, KeyModifiers::NONE) => (),
+            (KeyCode::Down, KeyModifiers::NONE) => (),
+            (KeyCode::Left, KeyModifiers::NONE) => (),
+            (KeyCode::Right, KeyModifiers::NONE) => (),
             // Handle backspace
-            (KeyCode::Backspace, KeyModifiers::NONE) => {
-                self.remove_char(false)?
-            }
+            (KeyCode::Backspace, KeyModifiers::NONE) => self.remove_char(false)?,
             // Handle delete
-            (KeyCode::Delete, KeyModifiers::NONE) => {
-                self.remove_char(true)?
-            }
+            (KeyCode::Delete, KeyModifiers::NONE) => self.remove_char(true)?,
             // Handle enter
-            (KeyCode::Enter, KeyModifiers::NONE) => {
-                self.insert_char('\n')?
-            }
+            (KeyCode::Enter, KeyModifiers::NONE) => self.insert_char('\n')?,
             // Handle normal characters
-            (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => {
-                self.insert_char(c)?
-            }
+            (KeyCode::Char(c), KeyModifiers::NONE | KeyModifiers::SHIFT) => self.insert_char(c)?,
             _ => (),
         }
 
@@ -120,51 +112,55 @@ impl Editor {
 
     // [Direct] Inserts a character into the buffer at the cursor position
     fn insert_char(&mut self, character: char) -> Result<()> {
-        // Get the buffer coordinate of the cursor
-        // This should automatically avoid inserting characters outside of the buffer
-        let buffer_coordinate = match self.terminal().get_current_buffer_index() {
-            Some(coord) => coord,
-            None => return Ok(()),
-        };
+        // // Get the buffer coordinate of the cursor
+        // // This should automatically avoid inserting characters outside of the buffer
+        // let buffer_coordinate = match self.terminal.get_current_buffer_index() {
+        //     Some(coord) => coord,
+        //     None => return Ok(()),
+        // };
 
-        // Insert the character into the buffer
-        self.buffer.insert(buffer_coordinate, character);
+        // // Insert the character into the buffer
+        // self.buffer.insert(buffer_coordinate, character);
 
-        // Perform a frame update
-        self.terminal().update()?;
+        // // Perform a frame update
+        // self.terminal.update(&self.buffer)?;
 
-        // Move the cursor right if the character is not a newline, and move it down if it is
-        match character {
-            '\n' => self.terminal().move_cursor_down(),
-            _ => self.terminal().move_cursor_right(),
-        }
+        // // Move the cursor right if the character is not a newline, and move it down if it is
+        // match character {
+        //     '\n' => (),
+        //     _ => (),
+        // }
+
+        Ok(())
     }
 
     // [Direct] Deletes the character in the buffer immediately preceding the cursor,
     // or alternatively immediately after the cursor (delete_mode)
     fn remove_char(&mut self, delete_mode: bool) -> Result<()> {
-        // Get the buffer coordinate of the cursor
-        // This should automatically avoid deleting characters outside of the buffer
-        let buffer_coordinate = match self.terminal().get_current_buffer_index() {
-            Some(coord) => coord,
-            None => return Ok(()),
-        };
+        // // Get the buffer coordinate of the cursor
+        // // This should automatically avoid deleting characters outside of the buffer
+        // let buffer_coordinate = match self.terminal.get_current_buffer_index() {
+        //     Some(coord) => coord,
+        //     None => return Ok(()),
+        // };
 
-        // Delete the character in the buffer
-        // The character to delete will either be before the cursor (backspace), or after (delete)
-        self.buffer.delete(match delete_mode {
-            true => buffer_coordinate,
-            false => buffer_coordinate - 1,
-        });
+        // // Delete the character in the buffer
+        // // The character to delete will either be before the cursor (backspace), or after (delete)
+        // self.buffer.delete(match delete_mode {
+        //     true => buffer_coordinate,
+        //     false => buffer_coordinate - 1,
+        // });
 
-        // Perform a frame update
-        self.terminal().update()?;
+        // // Perform a frame update
+        // self.terminal.update()?;
 
-        // Move the cursor left (backspace) or leave it in the same place (delete)
-        match delete_mode {
-            false => self.terminal().move_cursor_left(),
-            true => Ok(()),
-        }
+        // // Move the cursor left (backspace) or leave it in the same place (delete)
+        // match delete_mode {
+        //     false => self.terminal().move_cursor_left(),
+        //     true => Ok(()),
+        // }
+
+        Ok(())
     }
 
     // [Direct] Saves the buffer to the file
@@ -183,7 +179,9 @@ impl Editor {
                 .expect("[INTERNAL ERROR] Failed to acquire lock on file");
 
             // Write the buffer to the file
-            buffer.write_to_file(&mut *file).expect("[INTERNAL ERROR] Failed to write to file");
+            buffer
+                .write_to_file(&mut *file)
+                .expect("[INTERNAL ERROR] Failed to write to file");
         });
 
         Ok(())
@@ -192,7 +190,7 @@ impl Editor {
     // [Direct] Closes the terminal and exits the program
     fn exit(&mut self) -> Result<()> {
         // Close the terminal
-        self.terminal().exit()?;
+        self.terminal.exit()?;
 
         // Exit the program
         std::process::exit(0);
