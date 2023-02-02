@@ -9,6 +9,7 @@ use crossterm::{
 };
 
 use crate::Buffer;
+use crate::DeletionMode;
 use crate::Terminal;
 
 // Represents the state of the editor
@@ -30,7 +31,7 @@ impl Editor {
             .open(filename)
             .expect("[INTERNAL ERROR] Failed to open file");
 
-        // Read the file into a Rope
+        // Read the file into the buffer
         let buffer = Buffer::new(&file);
 
         // Store the file in an Arc<Mutex> so it can be shared between threads
@@ -92,14 +93,26 @@ impl Editor {
                 self.save()?;
             }
             // Handle arrow keypresses
-            (KeyCode::Up, KeyModifiers::NONE) => self.terminal.move_cursor_up(),
-            (KeyCode::Down, KeyModifiers::NONE) => self.terminal.move_cursor_down(),
-            (KeyCode::Left, KeyModifiers::NONE) => self.terminal.move_cursor_left(),
-            (KeyCode::Right, KeyModifiers::NONE) => self.terminal.move_cursor_right(),
+            (KeyCode::Up, KeyModifiers::NONE) => {
+                self.terminal.cursor().move_up();
+                self.terminal.update_cursor();
+            },
+            (KeyCode::Down, KeyModifiers::NONE) => {
+                self.terminal.cursor().move_down();
+                self.terminal.update_cursor();
+            },
+            (KeyCode::Left, KeyModifiers::NONE) => {
+                self.terminal.cursor().move_left();
+                self.terminal.update_cursor();
+            },
+            (KeyCode::Right, KeyModifiers::NONE) => {
+                self.terminal.cursor().move_right();
+                self.terminal.update_cursor();
+            },
             // Handle backspace
-            (KeyCode::Backspace, KeyModifiers::NONE) => self.remove_char(false)?,
+            (KeyCode::Backspace, KeyModifiers::NONE) => self.remove_char(DeletionMode::Backspace)?,
             // Handle delete
-            (KeyCode::Delete, KeyModifiers::NONE) => self.remove_char(true)?,
+            (KeyCode::Delete, KeyModifiers::NONE) => self.remove_char(DeletionMode::Delete)?,
             // Handle enter
             (KeyCode::Enter, KeyModifiers::NONE) => self.insert_char('\n')?,
             // Handle normal characters
@@ -119,33 +132,33 @@ impl Editor {
         //     None => return Ok(()),
         // };
 
-        // // Insert the character into the buffer
-        // self.buffer.insert(buffer_coordinate, character);
+        let buffer_index: usize = 0;
 
-        // // Perform a frame update
-        // self.terminal.update(&self.buffer)?;
+        // Insert the character into the buffer
+        self.buffer.insert(buffer_index, character);
 
-        // // Move the cursor right if the character is not a newline, and move it down if it is
-        // match character {
-        //     '\n' => (),
-        //     _ => (),
-        // }
+        // Move the cursor right if the character is not a newline, and move it down if it is
+        match character {
+            '\n' => self.terminal.cursor().move_down(),
+            _ => self.terminal.cursor().move_right(),
+        }
+
+        self.terminal.update_frame(&self.buffer)?;
+        self.terminal.update_cursor();
 
         Ok(())
     }
 
     // [Direct] Deletes the character in the buffer immediately preceding the cursor,
     // or alternatively immediately after the cursor (delete_mode)
-    fn remove_char(&mut self, delete_mode: bool) -> Result<()> {
+    fn remove_char(&mut self, deletion_mode: DeletionMode) -> Result<()> {
         // // Get the buffer coordinate of the cursor
         // // This should automatically avoid deleting characters outside of the buffer
         // let buffer_coordinate = match self.terminal.get_current_buffer_index() {
         //     Some(coord) => coord,
         //     None => return Ok(()),
         // };
-
-        // // Delete the character in the buffer
-        // // The character to delete will either be before the cursor (backspace), or after (delete)
+        // // Delete the character in the buffer      // // The character to delete will either be before the cursor (backspace), or after (delete)
         // self.buffer.delete(match delete_mode {
         //     true => buffer_coordinate,
         //     false => buffer_coordinate - 1,
@@ -154,11 +167,19 @@ impl Editor {
         // // Perform a frame update
         // self.terminal.update()?;
 
-        // // Move the cursor left (backspace) or leave it in the same place (delete)
-        // match delete_mode {
-        //     false => self.terminal().move_cursor_left(),
-        //     true => Ok(()),
-        // }
+        // Move the cursor left (backspace) or leave it in the same place (delete)
+
+        let buffer: usize = 0;
+
+        self.buffer.delete(buffer);
+        self.terminal.update_frame(&self.buffer)?;
+
+        match deletion_mode {
+            DeletionMode::Backspace => self.terminal.cursor().move_left(),
+            DeletionMode::Delete => (),
+        }
+
+        self.terminal.update_cursor();
 
         Ok(())
     }

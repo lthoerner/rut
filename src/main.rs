@@ -1,10 +1,11 @@
-use crossterm::Result;
-
 mod buffer;
 mod editor;
 mod terminal;
 
+use crossterm::Result;
+
 use buffer::Buffer;
+use buffer::DeletionMode;
 use editor::Editor;
 use terminal::Terminal;
 

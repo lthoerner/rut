@@ -18,11 +18,10 @@ use tui::{
 use crate::Buffer;
 
 pub struct Terminal {
-    terminal: tui::Terminal<CrosstermBackend<Stdout>>,
-    window_width: u16,
-    window_height: u16,
-    cursor_x: u16,
-    cursor_y: u16,
+    pub terminal: tui::Terminal<CrosstermBackend<Stdout>>,
+    pub window_width: u16,
+    pub window_height: u16,
+    pub cursor_pos: CursorPosition,
 }
 
 impl Terminal {
@@ -32,6 +31,7 @@ impl Terminal {
         let terminal = tui::Terminal::new(CrosstermBackend::new(stdout()))
             .expect("[INTERNAL ERROR] Failed to initialize terminal");
 
+        // Get the terminal size
         let window_size = terminal
             .size()
             .expect("[INTERNAL ERROR] Failed to get terminal size");
@@ -42,8 +42,7 @@ impl Terminal {
             terminal,
             window_width,
             window_height,
-            cursor_x: 0,
-            cursor_y: 0,
+            cursor_pos: CursorPosition::default(),
         }
     }
 
@@ -75,7 +74,7 @@ impl Terminal {
             f.render_widget(block, size);
 
             // Update the cursor
-            f.set_cursor(self.cursor_x, self.cursor_y)
+            f.set_cursor(self.cursor_pos.x, self.cursor_pos.y)
         })?;
 
         Ok(())
@@ -85,44 +84,65 @@ impl Terminal {
     pub fn update_cursor(&mut self) {
         execute!(
             self.terminal.backend_mut(),
-            cursor::MoveTo(self.cursor_x, self.cursor_y)
+            cursor::MoveTo(self.cursor_pos.x, self.cursor_pos.y)
         )
         .expect("[INTERNAL ERROR] Failed to move cursor")
     }
 
-    // Moves the cursor up
-    pub fn move_cursor_up(&mut self) {
-        if self.cursor_y > 0 {
-            self.cursor_y -= 1;
-        }
+    // Returns a reference to the terminal's cursor
+    pub fn cursor(&mut self) -> &mut CursorPosition {
+        &mut self.cursor_pos
+    }
+}
 
-        self.update_cursor()
+// Represents the position of the cursor in the buffer and in the terminal
+pub struct CursorPosition {
+    buffer_index: usize,
+    x: u16,
+    y: u16,
+}
+
+impl Default for CursorPosition {
+    fn default() -> Self {
+        Self {
+            buffer_index: 0,
+            x: 0,
+            y: 0,
+        }
+    }
+}
+
+impl CursorPosition {
+    // ! THESE ARE TEMPORARY
+
+    // Moves the cursor up
+    pub fn move_up(&mut self, buffer: &Buffer) {
+        if self.y > 0 {
+            self.y -= 1;
+        }
     }
 
     // Moves the cursor down
-    pub fn move_cursor_down(&mut self) {
-        if self.cursor_y < self.window_height {
-            self.cursor_y += 1;
-        }
-
-        self.update_cursor()
+    pub fn move_down(&mut self, buffer: &Buffer) {
+        self.y += 1;
     }
 
     // Moves the cursor left
-    pub fn move_cursor_left(&mut self) {
-        if self.cursor_x > 0 {
-            self.cursor_x -= 1;
+    pub fn move_left(&mut self, buffer: &Buffer) {
+        if self.x > 0 {
+            self.x -= 1;
         }
-
-        self.update_cursor()
     }
 
     // Moves the cursor right
-    pub fn move_cursor_right(&mut self) {
-        if self.cursor_x < self.window_width {
-            self.cursor_x += 1;
-        }
+    pub fn move_right(&mut self, buffer: &Buffer) {
+        self.x += 1;
+    }
 
-        self.update_cursor()
+    // ! END TEMPORARY
+
+    // Gets the cursor coordinate from its current buffer index
+    fn update_coords(&mut self, buffer: &Buffer) {
+        (self.x, self.y) = buffer.cursor_coord(self.buffer_index).expect("[INTERNAL ERROR] Cursor position was out of bounds");
     }
 }

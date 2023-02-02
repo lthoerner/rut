@@ -13,6 +13,11 @@ pub struct Buffer {
     rope: Rope,
 }
 
+pub enum DeletionMode {
+    Delete,
+    Backspace,
+}
+
 impl ToString for Buffer {
     fn to_string(&self) -> String {
         self.rope.to_string()
@@ -37,15 +42,51 @@ impl Buffer {
         self.rope.write_to(file)
     }
 
-    // // Inserts a character at the given index
-    // pub fn insert(&mut self, index: usize, character: char) {
-    //     self.rope.insert_char(index, character);
-    // }
+    // Inserts a character at the given index
+    pub fn insert(&mut self, index: usize, character: char) {
+        self.rope.insert_char(index, character);
+    }
 
-    // // Deletes a character at the given index
-    // pub fn delete(&mut self, index: usize) {
-    //     self.rope.remove(index..index + 1);
-    // }
+    // Deletes a character at the given index
+    pub fn delete(&mut self, index: usize) {
+        // Make sure the index is valid
+        if index >= self.rope.len_chars() {
+            return;
+        }
+
+        self.rope.remove(index..index + 1);
+    }
+
+    // Get the current cursor coordinate from a given buffer index
+    pub fn cursor_coord(&self, index: usize) -> Option<(u16, u16)> {
+        // Make sure the index is valid
+        if index >= self.rope.len_chars() {
+            return None;
+        }
+        
+        let mut current_line: usize = 0;
+        let mut current_line_start = 0;
+
+        for (i, c) in self.rope.chars().enumerate() {
+            // If the index is reached, return the current coordinate
+            if i == index {
+                // [EXAMPLE] if the searched index is 53, and the current_line_start
+                // is 50, then the coordinate would be (3, current_line)
+                return Some(((i - current_line_start) as u16, current_line as u16));
+            }
+            
+            if c == '\n' {
+                current_line += 1;
+                current_line_start = i + 1;
+            }
+        }
+
+        unreachable!("[INTERNAL ERROR] The given index was out of bounds but was not caught by the guard clause")
+    }
+
+    pub fn char_after_cursor(&self, cursor_coords: (u16, u16)) -> Option<char> {
+        Some(' ')
+    }
 
     // // Returns the starting buffer index of a given line
     // // ! What happens if a line is wrapped to a new line?
