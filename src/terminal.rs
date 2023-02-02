@@ -19,8 +19,6 @@ use crate::Buffer;
 
 pub struct Terminal {
     terminal: tui::Terminal<CrosstermBackend<Stdout>>,
-    window_width: u16,
-    window_height: u16,
     cursor_pos: CursorPosition,
 }
 
@@ -31,17 +29,8 @@ impl Terminal {
         let terminal = tui::Terminal::new(CrosstermBackend::new(stdout()))
             .expect("[INTERNAL ERROR] Failed to initialize terminal");
 
-        // Get the terminal size
-        let window_size = terminal
-            .size()
-            .expect("[INTERNAL ERROR] Failed to get terminal size");
-        let window_width = window_size.width;
-        let window_height = window_size.height;
-
         Self {
             terminal,
-            window_width,
-            window_height,
             cursor_pos: CursorPosition::default(),
         }
     }
