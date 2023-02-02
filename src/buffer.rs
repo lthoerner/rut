@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Seek;
 
 use crossterm::Result;
-use ropey::Rope;
+use ropey::{Rope, RopeSlice};
 
 #[derive(Default, Clone)]
 // Represents the buffer of the editor
@@ -53,7 +53,7 @@ impl Buffer {
         self.rope.remove(index..index + 1);
     }
 
-    // Get the current cursor coordinate from a given buffer index
+    // Gets the current cursor coordinate from a given buffer index
     pub fn cursor_coord(&self, index: usize) -> Option<(u16, u16)> {
         // Make sure the index is valid
         if index > self.size() {
@@ -81,7 +81,24 @@ impl Buffer {
         Some(((index - current_line_start) as u16, current_line as u16))
     }
 
-    // Get the number of characters in the buffer
+    // Gets a line from the buffer
+    // ! THIS WILL CRASH IF THE LINE IS OUT OF BOUNDS
+    // TODO: Make this safe to use
+    fn line(&self, line: usize) -> RopeSlice {
+        self.rope.line(line)
+    }
+
+    // Gets the length of a given line
+    pub fn line_len(&self, line: usize) -> usize {
+        self.line(line).len_chars()
+    }
+
+    // Gets the amount of lines in the buffer
+    pub fn line_count(&self) -> usize {
+        self.rope.len_lines()
+    }
+
+    // Gets the number of characters in the buffer
     pub fn size(&self) -> usize {
         self.rope.len_chars()
     }

@@ -113,6 +113,26 @@ impl CursorPosition {
 
     // Moves the cursor down
     pub fn move_down(&mut self, buffer: &Buffer) {
+        let y = self.y as usize;
+        let x = self.x as usize;
+
+        // If the cursor is at the last line of the buffer, do nothing
+        if y == buffer.line_count() - 1 {
+            return;
+        }
+
+        let remaining_chars_on_current_line = buffer.line_len(y) - x;
+
+        // If the next line is longer than the current X position,
+        // move to the same X position on the next line
+        // Otherwise, move to the end of the next line
+        if buffer.line_len(y + 1) > x {
+            self.buffer_index += remaining_chars_on_current_line + x;
+        } else {
+            self.buffer_index += remaining_chars_on_current_line + buffer.line_len(y + 1);
+        }
+
+        self.update_coords(buffer);
     }
 
     // Moves the cursor left
