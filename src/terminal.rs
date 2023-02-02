@@ -113,33 +113,31 @@ impl Default for CursorPosition {
 }
 
 impl CursorPosition {
-    // ! THESE ARE TEMPORARY
-
     // Moves the cursor up
     pub fn move_up(&mut self, buffer: &Buffer) {
-        if self.y > 0 {
-            self.y -= 1;
-        }
     }
 
     // Moves the cursor down
     pub fn move_down(&mut self, buffer: &Buffer) {
-        self.y += 1;
     }
 
     // Moves the cursor left
     pub fn move_left(&mut self, buffer: &Buffer) {
-        if self.x > 0 {
-            self.x -= 1;
+        if self.buffer_index > 0 {
+            self.buffer_index -= 1;
         }
+
+        self.update_coords(buffer);
     }
 
     // Moves the cursor right
     pub fn move_right(&mut self, buffer: &Buffer) {
-        self.x += 1;
-    }
+        if self.buffer_index < buffer.size() - 1 {
+            self.buffer_index += 1;
+        }
 
-    // ! END TEMPORARY
+        self.update_coords(buffer);
+    }
 
     // Gets the cursor coordinate from its current buffer index
     fn update_coords(&mut self, buffer: &Buffer) {

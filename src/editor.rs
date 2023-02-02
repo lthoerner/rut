@@ -94,19 +94,19 @@ impl Editor {
             }
             // Handle arrow keypresses
             (KeyCode::Up, KeyModifiers::NONE) => {
-                self.terminal.cursor().move_up();
+                self.terminal.cursor().move_up(&self.buffer);
                 self.terminal.update_cursor();
             },
             (KeyCode::Down, KeyModifiers::NONE) => {
-                self.terminal.cursor().move_down();
+                self.terminal.cursor().move_down(&self.buffer);
                 self.terminal.update_cursor();
             },
             (KeyCode::Left, KeyModifiers::NONE) => {
-                self.terminal.cursor().move_left();
+                self.terminal.cursor().move_left(&self.buffer);
                 self.terminal.update_cursor();
             },
             (KeyCode::Right, KeyModifiers::NONE) => {
-                self.terminal.cursor().move_right();
+                self.terminal.cursor().move_right(&self.buffer);
                 self.terminal.update_cursor();
             },
             // Handle backspace
@@ -139,8 +139,8 @@ impl Editor {
 
         // Move the cursor right if the character is not a newline, and move it down if it is
         match character {
-            '\n' => self.terminal.cursor().move_down(),
-            _ => self.terminal.cursor().move_right(),
+            '\n' => self.terminal.cursor().move_down(&self.buffer),
+            _ => self.terminal.cursor().move_right(&self.buffer),
         }
 
         self.terminal.update_frame(&self.buffer)?;
@@ -175,7 +175,7 @@ impl Editor {
         self.terminal.update_frame(&self.buffer)?;
 
         match deletion_mode {
-            DeletionMode::Backspace => self.terminal.cursor().move_left(),
+            DeletionMode::Backspace => self.terminal.cursor().move_left(&self.buffer),
             DeletionMode::Delete => (),
         }
 
