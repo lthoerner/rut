@@ -18,10 +18,10 @@ use tui::{
 use crate::Buffer;
 
 pub struct Terminal {
-    pub terminal: tui::Terminal<CrosstermBackend<Stdout>>,
-    pub window_width: u16,
-    pub window_height: u16,
-    pub cursor_pos: CursorPosition,
+    terminal: tui::Terminal<CrosstermBackend<Stdout>>,
+    window_width: u16,
+    window_height: u16,
+    cursor_pos: CursorPosition,
 }
 
 impl Terminal {
