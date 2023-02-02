@@ -56,7 +56,7 @@ impl Buffer {
     // Get the current cursor coordinate from a given buffer index
     pub fn cursor_coord(&self, index: usize) -> Option<(u16, u16)> {
         // Make sure the index is valid
-        if index >= self.rope.len_chars() {
+        if index > self.size() {
             return None;
         }
         
@@ -77,7 +77,8 @@ impl Buffer {
             }
         }
 
-        unreachable!("[INTERNAL ERROR] The given index was out of bounds but was not caught by the guard clause")
+        // If the index is at the end of the buffer, return the last coordinate
+        Some(((index - current_line_start) as u16, current_line as u16))
     }
 
     // Get the number of characters in the buffer

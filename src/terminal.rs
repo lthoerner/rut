@@ -137,7 +137,7 @@ impl CursorPosition {
 
     // Moves the cursor right
     pub fn move_right(&mut self, buffer: &Buffer) {
-        if self.buffer_index < buffer.size() - 1 {
+        if self.buffer_index < buffer.size() {
             self.buffer_index += 1;
         }
 
