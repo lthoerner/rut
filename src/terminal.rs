@@ -129,7 +129,7 @@ impl CursorPosition {
         if buffer.line_len(y + 1) > x {
             self.buffer_index += remaining_chars_on_current_line + x;
         } else {
-            self.buffer_index += remaining_chars_on_current_line + buffer.line_len(y + 1);
+            self.buffer_index += remaining_chars_on_current_line + buffer.line_len(y + 1) - 1;
         }
 
         self.update_coords(buffer);
