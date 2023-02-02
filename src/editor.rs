@@ -52,7 +52,7 @@ impl Editor {
         self.terminal.open()?;
 
         // Draw the initial buffer
-        self.terminal.update(&self.buffer)?;
+        self.terminal.update_frame(&self.buffer)?;
 
         // Start the event loop
         self.start_event_loop()
@@ -92,10 +92,10 @@ impl Editor {
                 self.save()?;
             }
             // Handle arrow keypresses
-            (KeyCode::Up, KeyModifiers::NONE) => (),
-            (KeyCode::Down, KeyModifiers::NONE) => (),
-            (KeyCode::Left, KeyModifiers::NONE) => (),
-            (KeyCode::Right, KeyModifiers::NONE) => (),
+            (KeyCode::Up, KeyModifiers::NONE) => self.terminal.move_cursor_up(),
+            (KeyCode::Down, KeyModifiers::NONE) => self.terminal.move_cursor_down(),
+            (KeyCode::Left, KeyModifiers::NONE) => self.terminal.move_cursor_left(),
+            (KeyCode::Right, KeyModifiers::NONE) => self.terminal.move_cursor_right(),
             // Handle backspace
             (KeyCode::Backspace, KeyModifiers::NONE) => self.remove_char(false)?,
             // Handle delete
