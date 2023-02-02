@@ -94,19 +94,19 @@ impl Editor {
             }
             // Handle arrow keypresses
             (KeyCode::Up, KeyModifiers::NONE) => {
-                self.terminal.cursor().move_up(&self.buffer);
+                self.terminal.cursor_mut().move_up(&self.buffer);
                 self.terminal.update_cursor();
             },
             (KeyCode::Down, KeyModifiers::NONE) => {
-                self.terminal.cursor().move_down(&self.buffer);
+                self.terminal.cursor_mut().move_down(&self.buffer);
                 self.terminal.update_cursor();
             },
             (KeyCode::Left, KeyModifiers::NONE) => {
-                self.terminal.cursor().move_left(&self.buffer);
+                self.terminal.cursor_mut().move_left(&self.buffer);
                 self.terminal.update_cursor();
             },
             (KeyCode::Right, KeyModifiers::NONE) => {
-                self.terminal.cursor().move_right(&self.buffer);
+                self.terminal.cursor_mut().move_right(&self.buffer);
                 self.terminal.update_cursor();
             },
             // Handle backspace
@@ -125,22 +125,16 @@ impl Editor {
 
     // [Direct] Inserts a character into the buffer at the cursor position
     fn insert_char(&mut self, character: char) -> Result<()> {
-        // // Get the buffer coordinate of the cursor
-        // // This should automatically avoid inserting characters outside of the buffer
-        // let buffer_coordinate = match self.terminal.get_current_buffer_index() {
-        //     Some(coord) => coord,
-        //     None => return Ok(()),
-        // };
-
-        let buffer_index: usize = 0;
+        // Get the index at which the character should be inserted
+        let buffer_index = self.terminal.cursor().index();
 
         // Insert the character into the buffer
         self.buffer.insert(buffer_index, character);
 
         // Move the cursor right if the character is not a newline, and move it down if it is
         match character {
-            '\n' => self.terminal.cursor().move_down(&self.buffer),
-            _ => self.terminal.cursor().move_right(&self.buffer),
+            '\n' => self.terminal.cursor_mut().move_down(&self.buffer),
+            _ => self.terminal.cursor_mut().move_right(&self.buffer),
         }
 
         self.terminal.update_frame(&self.buffer)?;
@@ -152,33 +146,21 @@ impl Editor {
     // [Direct] Deletes the character in the buffer immediately preceding the cursor,
     // or alternatively immediately after the cursor (delete_mode)
     fn remove_char(&mut self, deletion_mode: DeletionMode) -> Result<()> {
-        // // Get the buffer coordinate of the cursor
-        // // This should automatically avoid deleting characters outside of the buffer
-        // let buffer_coordinate = match self.terminal.get_current_buffer_index() {
-        //     Some(coord) => coord,
-        //     None => return Ok(()),
-        // };
-        // // Delete the character in the buffer      // // The character to delete will either be before the cursor (backspace), or after (delete)
-        // self.buffer.delete(match delete_mode {
-        //     true => buffer_coordinate,
-        //     false => buffer_coordinate - 1,
-        // });
+        // Get the index at which the character should be deleted, adjusting for the deletion mode
+        let buffer_index = self.terminal.cursor().index() - match deletion_mode {
+            DeletionMode::Backspace => 1,
+            DeletionMode::Delete => 0,
+        };
 
-        // // Perform a frame update
-        // self.terminal.update()?;
-
-        // Move the cursor left (backspace) or leave it in the same place (delete)
-
-        let buffer: usize = 0;
-
-        self.buffer.delete(buffer);
-        self.terminal.update_frame(&self.buffer)?;
-
+        // Delete the character from the buffer, either before (backspace) or after the cursor (delete)
+        self.buffer.delete(buffer_index);
+        
         match deletion_mode {
-            DeletionMode::Backspace => self.terminal.cursor().move_left(&self.buffer),
+            DeletionMode::Backspace => self.terminal.cursor_mut().move_left(&self.buffer),
             DeletionMode::Delete => (),
         }
-
+        
+        self.terminal.update_frame(&self.buffer)?;
         self.terminal.update_cursor();
 
         Ok(())

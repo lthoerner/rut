@@ -90,7 +90,12 @@ impl Terminal {
     }
 
     // Returns a reference to the terminal's cursor
-    pub fn cursor(&mut self) -> &mut CursorPosition {
+    pub fn cursor(&self) -> &CursorPosition {
+        &self.cursor_pos
+    }
+
+    // Returns a mutable reference to the terminal's cursor
+    pub fn cursor_mut(&mut self) -> &mut CursorPosition {
         &mut self.cursor_pos
     }
 }
@@ -142,5 +147,10 @@ impl CursorPosition {
     // Gets the cursor coordinate from its current buffer index
     fn update_coords(&mut self, buffer: &Buffer) {
         (self.x, self.y) = buffer.cursor_coord(self.buffer_index).expect("[INTERNAL ERROR] Cursor position was out of bounds");
+    }
+
+    // Returns the cursor's buffer index
+    pub fn index(&self) -> usize {
+        self.buffer_index
     }
 }
