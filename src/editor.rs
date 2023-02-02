@@ -146,20 +146,30 @@ impl Editor {
     // [Direct] Deletes the character in the buffer immediately preceding the cursor,
     // or alternatively immediately after the cursor (delete_mode)
     fn remove_char(&mut self, deletion_mode: DeletionMode) -> Result<()> {
-        // Get the index at which the character should be deleted, adjusting for the deletion mode
-        let buffer_index = self.terminal.cursor().index() - match deletion_mode {
-            DeletionMode::Backspace => 1,
-            DeletionMode::Delete => 0,
-        };
+        use DeletionMode::*;
 
-        // Delete the character from the buffer, either before (backspace) or after the cursor (delete)
+        // Get the index at which the character should be deleted, adjusting for the deletion mode
+        let mut buffer_index = self.terminal.cursor().index();
+
+        // Avoid backspacing characters preceding the start of the buffer
+        if buffer_index == 0 && deletion_mode == Backspace {
+            return Ok(());
+        }
+
+        // If a backspace is being performed, delete the character before the cursor instead of after
+        if let Backspace = deletion_mode {
+            buffer_index -= 1;
+        }
+
+        // Delete the character from the buffer
         self.buffer.delete(buffer_index);
         
-        match deletion_mode {
-            DeletionMode::Backspace => self.terminal.cursor_mut().move_left(&self.buffer),
-            DeletionMode::Delete => (),
+        // Adjust the cursor position depending on the deletion mode
+        if let Backspace = deletion_mode {
+            self.terminal.cursor_mut().move_left(&self.buffer);
         }
         
+        // Update the terminal
         self.terminal.update_frame(&self.buffer)?;
         self.terminal.update_cursor();
 

@@ -13,6 +13,7 @@ pub struct Buffer {
     rope: Rope,
 }
 
+#[derive(PartialEq)]
 pub enum DeletionMode {
     Delete,
     Backspace,
@@ -49,11 +50,6 @@ impl Buffer {
 
     // Deletes a character at the given index
     pub fn delete(&mut self, index: usize) {
-        // Make sure the index is valid
-        if index >= self.rope.len_chars() {
-            return;
-        }
-
         self.rope.remove(index..index + 1);
     }
 
