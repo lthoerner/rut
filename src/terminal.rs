@@ -3,14 +3,17 @@
 use std::io::{stdout, Stdout};
 
 use crossterm::{
+    cursor,
     event::{DisableMouseCapture, EnableMouseCapture},
     execute, queue,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
-    cursor,
     Result,
 };
 
-use tui::{backend::{CrosstermBackend, Backend}, widgets::Paragraph};
+use tui::{
+    backend::{Backend, CrosstermBackend},
+    widgets::Paragraph,
+};
 
 use crate::Buffer;
 
@@ -29,7 +32,9 @@ impl Terminal {
         let terminal = tui::Terminal::new(CrosstermBackend::new(stdout()))
             .expect("[INTERNAL ERROR] Failed to initialize terminal");
 
-        let window_size = terminal.size().expect("[INTERNAL ERROR] Failed to get terminal size");
+        let window_size = terminal
+            .size()
+            .expect("[INTERNAL ERROR] Failed to get terminal size");
         let window_width = window_size.width;
         let window_height = window_size.height;
 
@@ -45,7 +50,11 @@ impl Terminal {
     // Open the terminal window
     pub fn open(&mut self) -> Result<()> {
         enable_raw_mode()?;
-        execute!(self.terminal.backend_mut(), EnterAlternateScreen, DisableMouseCapture)
+        execute!(
+            self.terminal.backend_mut(),
+            EnterAlternateScreen,
+            DisableMouseCapture
+        )
     }
 
     // Close the terminal window
@@ -74,7 +83,11 @@ impl Terminal {
 
     // Performs a cursor update
     pub fn update_cursor(&mut self) {
-        execute!(self.terminal.backend_mut(), cursor::MoveTo(self.cursor_x, self.cursor_y)).expect("[INTERNAL ERROR] Failed to move cursor")
+        execute!(
+            self.terminal.backend_mut(),
+            cursor::MoveTo(self.cursor_x, self.cursor_y)
+        )
+        .expect("[INTERNAL ERROR] Failed to move cursor")
     }
 
     // Moves the cursor up
