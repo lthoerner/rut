@@ -1,4 +1,4 @@
-use std::io::{stdout, Write};
+use std::io::{Stdout, stdout, Write};
 
 use crossterm::cursor;
 use crossterm::style::Print;
@@ -21,6 +21,7 @@ pub struct Terminal<'a> {
 pub struct TerminalState {
     window_length: u16,
     window_height: u16,
+    stdout: Stdout,
 }
 
 impl TerminalState {
@@ -33,18 +34,19 @@ impl TerminalState {
         Self {
             window_length,
             window_height,
+            stdout: stdout(),
         }
     }
 }
 
 impl Terminal<'_> {
     // [Direct] Initializes the Terminal
-    pub fn init(&self) -> Result<()> {
+    pub fn init(&mut self) -> Result<()> {
         // Enable raw mode
         terminal::enable_raw_mode()?;
 
         // Disable blinking cursor
-        execute!(stdout(), cursor::DisableBlinking)?;
+        execute!(self.state.stdout, cursor::DisableBlinking)?;
 
         // Clear the screen
         self.full_clear()?;
@@ -54,14 +56,14 @@ impl Terminal<'_> {
     }
 
     // [Direct] Performs a frame update, clearing the screen and redrawing the buffer
-    pub fn update(&self) -> Result<()> {
+    pub fn update(&mut self) -> Result<()> {
         // Clear everything after the buffer
         self.partial_clear()?;
 
         // Save the position of the cursor
         // This could be be either the position of the cursor at the start of the frame update,
         // Or the (0, 0) position if the cursor is being reset
-        execute!(stdout(), cursor::SavePosition)?;
+        execute!(self.state.stdout, cursor::SavePosition)?;
 
         // Move the cursor to the top left corner in order to draw the buffer properly
         // This may seem unnecessary, but it is actually required because if the cursor position
@@ -71,27 +73,27 @@ impl Terminal<'_> {
 
         // Draw the buffer, making sure to carriage return after each line
         for line in self.buffer.lines() {
-            queue!(stdout(), Print("\r"), Print(line))?;
+            queue!(self.state.stdout, Print("\r"), Print(line))?;
         }
 
         // Restore the cursor position to its saved state
-        queue!(stdout(), cursor::RestorePosition)?;
+        queue!(self.state.stdout, cursor::RestorePosition)?;
 
-        stdout().flush()
+        self.state.stdout.flush()
     }
 
     // [Direct] Clears the entire terminal window
-    fn full_clear(&self) -> Result<()> {
+    fn full_clear(&mut self) -> Result<()> {
         self.clear(true)
     }
 
     // [Lazy] Clears the terminal window after the buffer, preserving the cursor position
-    fn partial_clear(&self) -> Result<()> {
+    fn partial_clear(&mut self) -> Result<()> {
         self.clear(false)
     }
 
     // [Lazy/Direct] Clears the terminal window, either entirely (full clear) or just the portion after the buffer
-    fn clear(&self, full_clear: bool) -> Result<()> {
+    fn clear(&mut self, full_clear: bool) -> Result<()> {
         // The default behavior of terminal::Clear is to maintain the cursor position
         // If the user wants to reset the cursor position, it needs to be done manually
         if full_clear {
@@ -100,12 +102,12 @@ impl Terminal<'_> {
 
         // Save the cursor position, which could either be (0, 0) for a
         // full clear, or the current position for a partial clear
-        execute!(stdout(), cursor::SavePosition)?;
+        execute!(self.state.stdout, cursor::SavePosition)?;
 
         // If clearing the entire screen
         if full_clear {
             // Clear the entire screen
-            queue!(stdout(), terminal::Clear(terminal::ClearType::All))?;
+            queue!(self.state.stdout, terminal::Clear(terminal::ClearType::All))?;
         } else {
             // Get the coordinate of the end of the buffer
             // ? Will this need to be adjusted based on the length of the insertion?
@@ -114,58 +116,55 @@ impl Terminal<'_> {
 
             // Move the cursor to the end of the buffer and clear everything after it
             queue!(
-                stdout(),
-                cursor::MoveTo(buffer_end_x as u16, buffer_end_y as u16)
-            )?;
-            queue!(
-                stdout(),
+                self.state.stdout,
+                cursor::MoveTo(buffer_end_x as u16, buffer_end_y as u16),
                 terminal::Clear(terminal::ClearType::FromCursorDown)
             )?;
         }
 
         // Restore the cursor position
-        queue!(stdout(), cursor::RestorePosition)?;
+        queue!(self.state.stdout, cursor::RestorePosition)?;
 
         if full_clear {
-            stdout().flush()?;
+            self.state.stdout.flush()?;
         }
 
         Ok(())
     }
 
     // [Direct] Moves the cursor up
-    pub fn move_cursor_up(&self) -> Result<()> {
+    pub fn move_cursor_up(&mut self) -> Result<()> {
         let (_, cursor_y) = self.cursor_position();
 
         // Avoid moving cursor out of bounds
         // If the cursor should not be moved, return early to prevent unnecessary flush
         if cursor_y > 0 {
-            queue!(stdout(), cursor::MoveUp(1))?;
+            queue!(self.state.stdout, cursor::MoveUp(1))?;
         } else {
             // ? Is there a better way to do this?
             return Ok(());
         }
 
-        stdout().flush()
+        self.state.stdout.flush()
     }
 
     // [Direct] Moves the cursor down
-    pub fn move_cursor_down(&self) -> Result<()> {
+    pub fn move_cursor_down(&mut self) -> Result<()> {
         let (_, cursor_y) = self.cursor_position();
 
         // Avoid moving cursor out of bounds
         // If the cursor should not be moved, return early to prevent unnecessary flush
         if cursor_y < self.state.window_height as usize - 1 {
-            queue!(stdout(), cursor::MoveDown(1))?;
+            queue!(self.state.stdout, cursor::MoveDown(1))?;
         } else {
             return Ok(());
         }
 
-        stdout().flush()
+        self.state.stdout.flush()
     }
 
     // [Direct] Moves the cursor left
-    pub fn move_cursor_left(&self) -> Result<()> {
+    pub fn move_cursor_left(&mut self) -> Result<()> {
         let (cursor_x, cursor_y) = self.cursor_position();
 
         // Avoid wrapping past the start of the screen
@@ -173,21 +172,21 @@ impl Terminal<'_> {
         if cursor_x == 0 && cursor_y == 0 {
             return Ok(());
         } else if cursor_x > 0 {
-            queue!(stdout(), cursor::MoveLeft(1))?;
+            queue!(self.state.stdout, cursor::MoveLeft(1))?;
         } else {
             let previous_line = cursor_y - 1;
             queue!(
-                stdout(),
+                self.state.stdout,
                 // ? Is there a better way to do this without two type casts?
                 cursor::MoveTo(self.buffer.line_length(previous_line) as u16, previous_line as u16)
             )?;
         }
 
-        stdout().flush()
+        self.state.stdout.flush()
     }
 
     // [Direct] Moves the cursor right
-    pub fn move_cursor_right(&self) -> Result<()> {
+    pub fn move_cursor_right(&mut self) -> Result<()> {
         let (cursor_x, cursor_y) = self.cursor_position();
 
         let max_x = self.state.window_length as usize - 1;
@@ -198,12 +197,12 @@ impl Terminal<'_> {
         if cursor_x == max_x && cursor_y == max_y {
             return Ok(());
         } else if cursor_x < max_x {
-            queue!(stdout(), cursor::MoveRight(1))?;
+            queue!(self.state.stdout, cursor::MoveRight(1))?;
         } else {
-            queue!(stdout(), cursor::MoveTo(0, (cursor_y + 1) as u16))?;
+            queue!(self.state.stdout, cursor::MoveTo(0, (cursor_y + 1) as u16))?;
         }
 
-        stdout().flush()
+        self.state.stdout.flush()
     }
     
     // Converts a buffer coordinate to a cursor position
@@ -227,17 +226,17 @@ impl Terminal<'_> {
     }
 
     // [Lazy] Resets the cursor to the top left of the terminal window
-    fn reset_cursor(&self) -> Result<()> {
-        queue!(stdout(), cursor::MoveTo(0, 0))
+    fn reset_cursor(&mut self) -> Result<()> {
+        queue!(self.state.stdout, cursor::MoveTo(0, 0))
     }
 
     // [Direct] Exits the terminal window and sets it back to its normal behavior
-    pub fn exit(&self) -> Result<()> {
+    pub fn exit(&mut self) -> Result<()> {
         // Disable raw mode so the terminal can be used normally
         terminal::disable_raw_mode()?;
 
         // Re-enable cursor blinking
-        queue!(stdout(), cursor::EnableBlinking)?;
+        queue!(self.state.stdout, cursor::EnableBlinking)?;
 
         // Clear the screen
         self.full_clear()
