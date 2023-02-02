@@ -84,37 +84,8 @@ impl Buffer {
         unreachable!("[INTERNAL ERROR] The given index was out of bounds but was not caught by the guard clause")
     }
 
-    // // Returns the length (end X-coordinate) of a line in the buffer
-    // pub fn line_length(&self, line: usize) -> usize {
-    //     // TODO: Make this not convert to a String (probably semi-inefficent)
-    //     let line = self.get_line(line).to_string();
-
-    //     // If the line ends with a newline, don't count it
-    //     if line.ends_with('\n') {
-    //         line.len() - 1
-    //     } else {
-    //         line.len()
-    //     }
-    // }
-
-    // // Get the number of lines in the buffer
-    // pub fn line_count(&self) -> usize {
-    //     self.rope.len_lines()
-    // }
-
     // Get the number of characters in the buffer
     pub fn size(&self) -> usize {
         self.rope.len_chars()
     }
-
-    // // Returns an iterate over the lines in the buffer
-    // pub fn lines(&self) -> ropey::iter::Lines {
-    //     self.rope.lines()
-    // }
-
-    // // Returns a line from the buffer
-    // // TODO: Add error handling here, as Rope.line() will panic if the line doesn't exist
-    // fn get_line(&self, line: usize) -> ropey::RopeSlice {
-    //     self.rope.line(line)
-    // }
 }
