@@ -80,6 +80,84 @@ impl Buffer {
         // If the index is at the end of the buffer, return the last coordinate
         Some(((index - current_line_start) as u16, current_line as u16))
     }
+    
+    // Get the index of the start of the current word
+    pub fn start_of_word(&self, index: usize) -> usize {
+        // Make sure the index is valid
+        if index == 0 {
+            return 0;
+        }
+
+        // Ropey does not have a reverse iterator, so we have build one manually
+        let mut slice = self.rope.slice(..index).chars_at(index);
+        let chars = std::iter::from_fn(|| slice.prev());
+
+        let mut start_of_word = index;
+
+        // If the cursor starts in the middle of two words, skip the trailing whitespace
+        let mut skipping_whitespace = false;
+
+        for (i, c) in chars.enumerate() {
+            // Skip all trailing whitespace
+            if i == 0 && c.is_whitespace() {
+                skipping_whitespace = true;
+                continue;
+            }
+
+            if skipping_whitespace && !c.is_whitespace() {
+                skipping_whitespace = false;
+                continue;
+            }
+
+            // If the word is the first word in the buffer, return 0
+            if index - (i + 1) == 0 {
+                start_of_word = 0;
+                break;
+            }
+
+            // If the char is whitespace, we have reached the start of the word
+            if !skipping_whitespace && c.is_whitespace() {
+                start_of_word = index - i;
+                break;
+            }
+        }
+
+        start_of_word
+    }
+
+    // Get the index of the end of the current word
+    pub fn end_of_word(&self, index: usize) -> usize {
+        // Make sure the index is valid
+        if index > self.size() {
+            return index;
+        }
+
+        let mut end_of_word = index;
+
+        // If the cursor starts in the middle of two words, skip the leading whitespace
+        let mut skipping_whitespace = false;
+
+        for (i, c) in self.rope.chars().enumerate().skip(index) {
+            // Skip all leading whitespace
+            if i == index && c.is_whitespace() {
+                skipping_whitespace = true;
+                continue;
+            }
+
+            if skipping_whitespace && !c.is_whitespace() {
+                skipping_whitespace = false;
+                continue;
+            }
+
+            // If the char is whitespace, we have reached the end of the word
+            if !skipping_whitespace && c.is_whitespace() {
+                end_of_word = i;
+                break;
+            }
+        }
+
+        end_of_word
+    }
 
     // Gets a line from the buffer
     // ! THIS WILL CRASH IF THE LINE IS OUT OF BOUNDS

@@ -180,6 +180,24 @@ impl CursorPosition {
         self.update_coords(buffer);
     }
 
+    // Moves the cursor to teh start of the word
+    pub fn move_word_left(&mut self, buffer: &Buffer) {
+        if self.buffer_index > 0 {
+            self.buffer_index = buffer.start_of_word(self.buffer_index);
+        }
+
+        self.update_coords(buffer);
+    }
+
+    // Moves the cursor to the end of the word
+    pub fn move_word_right(&mut self, buffer: &Buffer) {
+        if self.buffer_index < buffer.size() {
+            self.buffer_index = buffer.end_of_word(self.buffer_index);
+        }
+
+        self.update_coords(buffer);
+    }
+
     // Gets the cursor coordinate from its current buffer index
     fn update_coords(&mut self, buffer: &Buffer) {
         (self.x, self.y) = buffer

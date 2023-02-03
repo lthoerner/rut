@@ -109,6 +109,15 @@ impl Editor {
                 self.terminal.cursor_mut().move_right(&self.buffer);
                 self.terminal.update_cursor();
             }
+            // Handle Ctrl+LEFT and Ctrl+RIGHT
+            (KeyCode::Left, KeyModifiers::CONTROL) => {
+                self.terminal.cursor_mut().move_word_left(&self.buffer);
+                self.terminal.update_cursor();
+            }
+            (KeyCode::Right, KeyModifiers::CONTROL) => {
+                self.terminal.cursor_mut().move_word_right(&self.buffer);
+                self.terminal.update_cursor();
+            }
             // Handle backspace
             (KeyCode::Backspace, KeyModifiers::NONE) => {
                 self.remove_char(DeletionMode::Backspace)?
