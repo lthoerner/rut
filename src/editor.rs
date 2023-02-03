@@ -131,12 +131,10 @@ impl Editor {
         // Insert the character into the buffer
         self.buffer.insert(buffer_index, character);
 
-        // Move the cursor right if the character is not a newline, and move it down if it is
-        match character {
-            '\n' => self.terminal.cursor_mut().move_down(&self.buffer),
-            _ => self.terminal.cursor_mut().move_right(&self.buffer),
-        }
+        // Adjust the cursor position
+        self.terminal.cursor_mut().move_right(&self.buffer);
 
+        // Update the terminal
         self.terminal.update_frame(&self.buffer)?;
         self.terminal.update_cursor();
 
