@@ -177,7 +177,9 @@ impl CursorPosition {
 
     // Gets the cursor coordinate from its current buffer index
     fn update_coords(&mut self, buffer: &Buffer) {
-        (self.x, self.y) = buffer.cursor_coord(self.buffer_index).expect("[INTERNAL ERROR] Cursor position was out of bounds");
+        (self.x, self.y) = buffer
+            .cursor_coord(self.buffer_index)
+            .expect("[INTERNAL ERROR] Cursor position was out of bounds");
     }
 
     // Returns the cursor's buffer index

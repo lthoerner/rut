@@ -96,21 +96,23 @@ impl Editor {
             (KeyCode::Up, KeyModifiers::NONE) => {
                 self.terminal.cursor_mut().move_up(&self.buffer);
                 self.terminal.update_cursor();
-            },
+            }
             (KeyCode::Down, KeyModifiers::NONE) => {
                 self.terminal.cursor_mut().move_down(&self.buffer);
                 self.terminal.update_cursor();
-            },
+            }
             (KeyCode::Left, KeyModifiers::NONE) => {
                 self.terminal.cursor_mut().move_left(&self.buffer);
                 self.terminal.update_cursor();
-            },
+            }
             (KeyCode::Right, KeyModifiers::NONE) => {
                 self.terminal.cursor_mut().move_right(&self.buffer);
                 self.terminal.update_cursor();
-            },
+            }
             // Handle backspace
-            (KeyCode::Backspace, KeyModifiers::NONE) => self.remove_char(DeletionMode::Backspace)?,
+            (KeyCode::Backspace, KeyModifiers::NONE) => {
+                self.remove_char(DeletionMode::Backspace)?
+            }
             // Handle delete
             (KeyCode::Delete, KeyModifiers::NONE) => self.remove_char(DeletionMode::Delete)?,
             // Handle enter
@@ -161,12 +163,12 @@ impl Editor {
 
         // Delete the character from the buffer
         self.buffer.delete(buffer_index);
-        
+
         // Adjust the cursor position depending on the deletion mode
         if let Backspace = deletion_mode {
             self.terminal.cursor_mut().move_left(&self.buffer);
         }
-        
+
         // Update the terminal
         self.terminal.update_frame(&self.buffer)?;
         self.terminal.update_cursor();

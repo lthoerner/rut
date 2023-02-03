@@ -59,7 +59,7 @@ impl Buffer {
         if index > self.size() {
             return None;
         }
-        
+
         let mut current_line: usize = 0;
         let mut current_line_start = 0;
 
@@ -70,7 +70,7 @@ impl Buffer {
                 // is 50, then the coordinate would be (3, current_line)
                 return Some(((i - current_line_start) as u16, current_line as u16));
             }
-            
+
             if c == '\n' {
                 current_line += 1;
                 current_line_start = i + 1;
