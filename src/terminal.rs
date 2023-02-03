@@ -1,11 +1,9 @@
-#![allow(unused_imports)]
-
 use std::io::{stdout, Stdout};
 
 use crossterm::{
     cursor,
-    event::{DisableMouseCapture, EnableMouseCapture},
-    execute, queue,
+    event::DisableMouseCapture,
+    execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     Result,
 };
