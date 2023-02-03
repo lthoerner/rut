@@ -151,7 +151,12 @@ impl CursorPosition {
         if next_line_len > x {
             self.buffer_index += remaining_chars_on_current_line + x;
         } else {
-            self.buffer_index += remaining_chars_on_current_line + next_line_len - 1;
+            // If the next line's length is 0 but the program has not tripped a guard clause,
+            // it means that the last line of the buffer is empty, which requires a special case
+            self.buffer_index += remaining_chars_on_current_line + next_line_len - match next_line_len {
+                0 => 0,
+                _ => 1,
+            };
         }
 
         self.update_coords(buffer);
