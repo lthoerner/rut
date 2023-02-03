@@ -125,7 +125,7 @@ impl Editor {
         Ok(())
     }
 
-    // [Direct] Inserts a character into the buffer at the cursor position
+    // Inserts a character into the buffer at the cursor position
     fn insert_char(&mut self, character: char) -> Result<()> {
         // Get the index at which the character should be inserted
         let buffer_index = self.terminal.cursor().index();
@@ -143,7 +143,7 @@ impl Editor {
         Ok(())
     }
 
-    // [Direct] Deletes the character in the buffer immediately preceding the cursor,
+    // Deletes the character in the buffer immediately preceding the cursor,
     // or alternatively immediately after the cursor (delete_mode)
     fn remove_char(&mut self, deletion_mode: DeletionMode) -> Result<()> {
         use DeletionMode::*;
@@ -176,7 +176,7 @@ impl Editor {
         Ok(())
     }
 
-    // [Direct] Saves the buffer to the file
+    // Saves the buffer to the file
     // ! This might crash the program if the file is being saved twice at the same time
     fn save(&mut self) -> Result<()> {
         // Clone the buffer so it can be used in a separate thread
@@ -200,7 +200,7 @@ impl Editor {
         Ok(())
     }
 
-    // [Direct] Closes the terminal and exits the program
+    // Closes the terminal and exits the program
     fn exit(&mut self) -> Result<()> {
         // Close the terminal
         self.terminal.exit()?;
