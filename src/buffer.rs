@@ -186,4 +186,20 @@ impl Buffer {
     pub fn size(&self) -> usize {
         self.rope.len_chars()
     }
+    
+   pub fn get_char_after_cursor(buffer: Buffer, cursor_pos: (u16, u16)) -> Option<char> {
+        let (cursor_x, cursor_y) = (cursor_pos) as usize;
+
+        let start = buffer.rope.line_to_char(cursor_x) + cursor_y;
+        let end = start + 1;
+        buffer.slice(start..end).chars().next()
+    }
+
+    pub fn get_char_before_cursor(buffer: Buffer, cursor_pos: (u16, u16)) -> Option<char> {
+        let (cursor_x, cursor_y) = (cursor_pos) as usize;
+
+        let start = buffer.rope.line_to_char(cursor_x) + cursor_y;
+        let end = start - 1;
+        buffer.slice(start..end).chars().next()
+    }
 }
