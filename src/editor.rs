@@ -93,6 +93,7 @@ impl Editor {
                 self.save()?;
             }
             // Handle arrow keypresses
+            // TODO: Deduplicate and find some way to not pass in the buffer to the cursor methods
             (KeyCode::Up, KeyModifiers::NONE) => {
                 self.terminal.cursor_mut().move_up(&self.buffer);
                 self.terminal.update_cursor();
