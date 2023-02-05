@@ -122,6 +122,11 @@ impl Editor {
             (KeyCode::Backspace, KeyModifiers::NONE) => {
                 self.remove_char(DeletionMode::Backspace)?
             }
+            // Handle Ctrl+BACKSPACE
+            // ! This is bound to Ctrl+L for now because Ctrl+BACKSPACE does not seem to work
+            (KeyCode::Char('l'), KeyModifiers::CONTROL) => {
+                self.remove_word()?
+            }
             // Handle delete
             (KeyCode::Delete, KeyModifiers::NONE) => self.remove_char(DeletionMode::Delete)?,
             // Handle enter
@@ -171,10 +176,32 @@ impl Editor {
         }
 
         // Delete the character from the buffer
-        self.buffer.delete(buffer_index);
+        self.buffer.delete(buffer_index..buffer_index + 1);
 
         // Adjust the cursor position depending on the deletion mode
         if let Backspace = deletion_mode {
+            self.terminal.cursor_mut().move_left(&self.buffer);
+        }
+
+        // Update the terminal
+        self.terminal.update_frame(&self.buffer)?;
+        self.terminal.update_cursor();
+
+        Ok(())
+    }
+
+    // Deletes the word immediately preceding the cursor
+    fn remove_word(&mut self) -> Result<()> {
+        // Get the index range of the word that should be deleted
+        let word_end = self.terminal.cursor().index();
+        let word_start = self.buffer.start_of_word(word_end);
+
+        // Delete the word from the buffer
+        self.buffer.delete(word_start..word_end);
+
+        // Adjust the cursor position
+        // TODO: Probably not the most efficient way to do this, maybe add a parameter to cursor move methods
+        for _ in word_start..word_end {
             self.terminal.cursor_mut().move_left(&self.buffer);
         }
 

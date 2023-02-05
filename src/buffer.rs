@@ -2,6 +2,7 @@
 
 use std::fs::File;
 use std::io::Seek;
+use std::ops::Range;
 
 use crossterm::Result;
 use ropey::{Rope, RopeSlice};
@@ -48,9 +49,9 @@ impl Buffer {
         self.rope.insert_char(index, character);
     }
 
-    // Deletes a character at the given index
-    pub fn delete(&mut self, index: usize) {
-        self.rope.remove(index..index + 1);
+    // Deletes a group of characters at the given index
+    pub fn delete(&mut self, range: Range<usize>) {
+        self.rope.remove(range);
     }
 
     // Gets the current cursor coordinate from a given buffer index
@@ -89,8 +90,13 @@ impl Buffer {
         }
 
         // Ropey does not have a reverse iterator, so we have build one manually
+        // TODO: Make this more efficient (backward char iteration as seen in commented code)
         let mut slice = self.rope.slice(..index).chars_at(index);
         let chars = std::iter::from_fn(|| slice.prev());
+
+        // for c in self.rope.chars_at(index).reversed().enumerate() {
+
+        // }
 
         let mut start_of_word = index;
 
